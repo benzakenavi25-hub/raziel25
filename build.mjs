@@ -38,7 +38,8 @@ const K = {
   story: (d.story || []).map(s => use(s.photo)),
   floors: floors.map(f => use(f.photo)),
   spots: floors.map(f => (f.spots || []).map(p => use(p.photo))),
-  garden: (d.gardenPhotos || []).map(g => use(g.photo)),
+  gdFrom: d.gardens ? use(d.gardens.from) : null, gdTo: d.gardens ? use(d.gardens.to) : null,
+  garden: ((d.gardens || {}).photos || []).map(g => use(g.photo)),
   gallery: (d.gallery || []).map(g => use(g.photo)),
 };
 const fullscreen = new Set((P.fullscreen || [P.hero, P.signature]).map(String));
@@ -317,18 +318,30 @@ function sections() {
 
   /* signature (full-bleed, pinned) */
   S.sig = K.sig ? `
-<section class="sig" id="house" aria-label="${esc(L.house || d.signature || d.title)}">
+<section class="sig" id="house" aria-label="${esc(d.signature || d.title)}">
   <div class="sig-stage">
-  <div class="sig-pan">${img(K.sig, { cls: 'sig-img', cover: false, sizes: coverSizes(K.sig) })}</div>
+  <div class="sig-pan">${img(K.sig, { cls: 'sig-img', cover: false, sizes: coverSizes(K.sig) }).replace('<img ', `<img data-pan="${((P.pan || {})[P.signature] || []).join(',')}" `)}</div>
   <div class="sig-shade"></div>
   <div class="sig-text">
     ${head(L.house, d.signature)}
     ${d.signatureSub ? `<p class="sig-sub">${nums(d.signatureSub)}</p>` : ''}
   </div>
   </div>
+  </section>` : '';
+
+  /* the gardens: the living room continues outside (framed 28 → zoom into the door → 40 full-bleed) */
+  const G = d.gardens;
+  S.gardens = G && K.gdFrom && K.gdTo ? `
+<section class="gardens" id="gardens" aria-label="${esc(G.title)}">
+  <div class="gd-stage">
+    <div class="gd-head">${head(L.gardens, G.title)}</div>
+    <div class="gd-center"><div class="gd-zoom" style="transform-origin:${esc(G.origin || '50% 50%')}">${frame(img(K.gdFrom, { sizes: '(min-width: 900px) 70vw, 200vw' }), { cls: 'gd-frame', reveal: false })}</div></div>
+    <div class="gd-full">${img(K.gdTo, { cls: 'gd-img', sizes: coverSizes(K.gdTo) })}</div>
+  </div>
   ${K.garden.length ? `<div class="sig-more">
-    ${d.gardenPhotos.map((g, i) => `<figure class="sig-fig">${frame(img(K.garden[i], { sizes: '(min-width: 900px) 42vw, calc(100vw - 48px)' }), { cls: 'sig-frame' })}<figcaption class="sig-cap"><span class="label-en" lang="en">${esc(g.latin)}</span> · ${esc(g.he)}</figcaption></figure>`).join('\n    ')}
+    ${G.photos.map((g, i) => `<figure class="sig-fig">${frame(img(K.garden[i], { sizes: '(min-width: 900px) 42vw, calc(100vw - 48px)' }), { cls: 'sig-frame' })}<figcaption class="sig-cap"><span class="label-en" lang="en">${esc(g.latin)}</span> · ${esc(g.he)}</figcaption></figure>`).join('\n    ')}
   </div>` : ''}
+  ${G.line ? `<p class="gd-line" data-fade>${nums(G.line)}</p>` : ''}
 </section>` : '';
 
   /* story */
@@ -501,7 +514,7 @@ function sections() {
 </footer>`;
 
   /* menu: one link per section that exists */
-  const target = { house: ['#house', S.sig], story: ['#story', S.story], plan: ['#plan', S.plan], imagine: ['#imagine', S.imagine], price: ['#price', S.price],
+  const target = { house: ['#house', S.sig], gardens: ['#gardens', S.gardens], story: ['#story', S.story], plan: ['#plan', S.plan], imagine: ['#imagine', S.imagine], price: ['#price', S.price],
     gallery: ['#gallery', S.gallery], location: ['#location', S.location], visit: ['#visit', S.visit] };
   const order = d.menuOrder || Object.keys(target);
   const items = order.filter(k => target[k] && target[k][1] && L[k] && M[k]);

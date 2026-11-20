@@ -255,7 +255,7 @@
     "note": "בבלעדיות · בוטיק נדל״ן"
   },
   "labels": {
-    "house": "THE GARDENS",
+    "house": "THE HOUSE",
     "story": "GROUND FLOOR",
     "imagine": "IMAGINE",
     "plan": "THE PLAN",
@@ -263,19 +263,20 @@
     "facts": "IN NUMBERS",
     "gallery": "GALLERY",
     "location": "THE LOCATION",
-    "visit": "PRIVATE TOUR"
+    "visit": "PRIVATE TOUR",
+    "gardens": "THE GARDENS"
   },
   "menu": {
-    "house": "הגינות",
     "plan": "התוכנית",
     "imagine": "לדמיין",
     "price": "מחיר",
     "gallery": "גלריה",
     "location": "מיקום",
-    "visit": "תיאום ביקור"
+    "visit": "תיאום ביקור",
+    "gardens": "הגינות"
   },
   "menuOrder": [
-    "house",
+    "gardens",
     "plan",
     "imagine",
     "price",
@@ -285,11 +286,12 @@
   ],
   "photos": {
     "hero": 20,
-    "signature": 36,
+    "signature": 44,
     "location": 44,
     "fullscreen": [
       20,
-      36
+      44,
+      40
     ],
     "focus": {
       "14": "45% 55%",
@@ -300,6 +302,7 @@
       "28": "50% 50%",
       "30": "60% 55%",
       "36": "50% 55%",
+      "40": "50% 60%",
       "44": "50% 50%",
       "47": "45% 55%"
     },
@@ -331,7 +334,14 @@
       "40": "הגינה עם הדק והצמחייה",
       "43": "הגינה והבית, ויטרינות אל הדק",
       "44": "הבית מהגינה: ויטרינות אל הדק",
+      "45": "הגינה: דק, עץ זית והבית",
       "47": "חזית הבית מהרחוב"
+    },
+    "pan": {
+      "44": [
+        0.44,
+        0.28
+      ]
     }
   },
   "gallery": [
@@ -416,17 +426,24 @@
       "he": "חדר"
     }
   ],
-  "gardenPhotos": [
-    {
-      "photo": 40,
-      "latin": "GARDEN",
-      "he": "הגינה"
-    },
-    {
-      "photo": 44,
-      "latin": "FROM THE GARDEN",
-      "he": "הבית מהגינה"
-    }
-  ],
-  "planHint": "לחצו על חדר ותיכנסו אליו."
+  "planHint": "לחצו על חדר ותיכנסו אליו.",
+  "gardens": {
+    "title": "הסלון ממשיך החוצה.",
+    "from": 28,
+    "origin": "38% 52%",
+    "to": 40,
+    "photos": [
+      {
+        "photo": 40,
+        "latin": "GARDEN",
+        "he": "הגינה"
+      },
+      {
+        "photo": 45,
+        "latin": "GARDEN",
+        "he": "הגינה"
+      }
+    ],
+    "line": "שתי גינות עם דק, 75 מ״ר, יציאה ישירה מהסלון."
+  }
 }

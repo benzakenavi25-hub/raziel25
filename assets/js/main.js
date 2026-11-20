@@ -87,7 +87,7 @@
 
   /* ---------------- floating pill: never in pinned sequences or the hero, gone from the visit section on ---------------- */
   const pill = $('.pill');
-  const noPillZones = ['#hero', '#house .sig-stage', '#story', '#plan'].map(s => $(s)).filter(Boolean);
+  const noPillZones = ['#hero', '#house .sig-stage', '#gardens .gd-stage', '#story', '#plan'].map(s => $(s)).filter(Boolean);
   const visit = $('#visit');
   const guard = $$('.sh, .story-line, .price-sub, .extras, .loc-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
   const frames = $$('.frame').filter(f => !f.closest('#story, #plan, #hero, .room-sheet'));
@@ -233,13 +233,40 @@
       defaults: { ease: 'none' },
       scrollTrigger: { trigger: sig, start: 'top top', end: () => '+=' + Math.round(innerHeight * 1.7), pin: true, scrub: 0.6, invalidateOnRefresh: true, anticipatePin: 1 }
     });
-    tl.fromTo(im, { x: 0, scale: 1 }, { x: () => Math.max(0, im.offsetWidth - innerWidth), scale: 1.08, duration: 1 }, 0);
+    // pan: the visible centre moves between two points of the photo (data-pan "from,to"), or across all of it
+    const pan = (im.dataset.pan || '').split(',').filter(Boolean).map(Number);
+    const xAt = c => { const W = im.offsetWidth, vw = innerWidth; return Math.max(0, Math.min(W - vw, W * (1 - c) - vw / 2)); };
+    tl.fromTo(im, { x: () => pan.length === 2 ? xAt(pan[0]) : 0, scale: 1 }, { x: () => pan.length === 2 ? xAt(pan[1]) : Math.max(0, im.offsetWidth - innerWidth), scale: 1.06, duration: 1 }, 0);
     const lab = $('.sh-label', sh), lns = $$('.ln > span', sh), rule = $('.sh-rule', sh);
     tl.fromTo(lab, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.1, ease: 'power2.out' }, 0.08)
       .fromTo(lns, { yPercent: 105, y: 0 }, { yPercent: 0, duration: 0.14, stagger: 0.03, ease: 'power3.out' }, 0.12)
       .fromTo(rule, { scaleX: 0 }, { scaleX: 1, duration: 0.12, ease: 'power2.inOut' }, 0.24);
     if (sub) tl.fromTo(sub, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.14, ease: 'power2.out' }, 0.3);
     jumps['#house'] = () => tl.scrollTrigger.start + (tl.scrollTrigger.end - tl.scrollTrigger.start) * 0.4;
+  }
+
+  /* ---------------- the gardens: the framed living room, zoom into its glass door, the deck takes the screen ---------------- */
+  const gardens = $('#gardens');
+  if (gardens) {
+    const stage = $('.gd-stage', gardens), sh = $('.gd-head .sh', gardens), zoom = $('.gd-zoom', gardens), fr = $('.gd-frame', gardens);
+    const lines = $('.fr-lines', fr), full = $('.gd-full', gardens), fimg = $('.gd-img', gardens);
+    hideFrame(fr, $('.frame-in', fr));
+    ScrollTrigger.create({ trigger: gardens, start: 'top 60%', once: true, onEnter: () => {
+      const t = revealHead(sh);
+      drawFrame(t, fr, 0.2, 0.9, fr.offsetWidth, fr.offsetHeight);
+      risePhoto(t, $('.frame-in', fr), 1.0, 0.9);
+    } });
+    const tl = gsap.timeline({
+      defaults: { ease: 'none' },
+      scrollTrigger: { trigger: stage, start: 'top top', end: () => '+=' + Math.round(innerHeight * 2.2), pin: true, scrub: 0.6, invalidateOnRefresh: true, anticipatePin: 1 }
+    });
+    tl.to(sh, { opacity: 0, y: -30, duration: 0.12 }, 0.02)
+      .to(lines, { opacity: 0, duration: 0.1 }, 0.04)
+      .fromTo(zoom, { scale: 1 }, { scale: 9, duration: 0.58, ease: 'power2.in' }, 0.04)
+      .fromTo(full, { opacity: 0 }, { opacity: 1, duration: 0.16 }, 0.4)
+      .fromTo(fimg, { scale: 1.2 }, { scale: 1, duration: 0.3, ease: 'power2.out' }, 0.4)
+      .to(fimg, { scale: 1.07, duration: 0.3 }, 0.7);
+    jumps['#gardens'] = () => tl.scrollTrigger.start + 2;
   }
 
   /* ---------------- the story: pinned; the framed photo rises away while the next frame draws ---------------- */
@@ -321,7 +348,7 @@
   }
 
   /* ---------------- generic reveals (created after the pins so their positions include the pin spacing) ---------------- */
-  $$('.sh').filter(sh => !sh.closest('#hero, #house, #story, #plan')).forEach(sh => {
+  $$('.sh').filter(sh => !sh.closest('#hero, #house, #story, #plan, .gd-stage')).forEach(sh => {
     ScrollTrigger.create({ trigger: sh, start: 'top 86%', once: true, onEnter: () => revealHead(sh) });
   });
   const fadeIn = (el, delay = 0) => gsap.fromTo(el, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
