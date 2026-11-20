@@ -66,25 +66,29 @@
           "label": "מטבח",
           "photo": 23,
           "x": 24,
-          "y": 38
+          "y": 38,
+          "id": "kitchen"
         },
         {
           "label": "סלון",
           "photo": 28,
           "x": 78,
-          "y": 72
+          "y": 72,
+          "id": "living"
         },
         {
           "label": "פינת אוכל",
           "photo": 33,
           "x": 75,
-          "y": 30
+          "y": 30,
+          "id": "dining"
         },
         {
           "label": "מדרגות",
           "photo": 19,
           "x": 30,
-          "y": 82
+          "y": 82,
+          "id": "stairs"
         }
       ]
     },
@@ -105,25 +109,29 @@
           "label": "סוויטת הורים",
           "photo": 14,
           "x": 74,
-          "y": 78
+          "y": 78,
+          "id": "master-suite"
         },
         {
           "label": "חדר רחצה",
           "photo": 16,
           "x": 52,
-          "y": 36
+          "y": 36,
+          "id": "bath"
         },
         {
           "label": "סוויטה שנייה",
           "photo": 18,
           "x": 25,
-          "y": 30
+          "y": 30,
+          "id": "second-suite"
         },
         {
           "label": "חדר רחצה שני",
           "photo": 3,
           "x": 25,
-          "y": 59
+          "y": 59,
+          "id": "bath-2"
         }
       ]
     },
@@ -144,13 +152,15 @@
           "label": "חדר",
           "photo": 9,
           "x": 68,
-          "y": 28
+          "y": 28,
+          "id": "lower-room-1"
         },
         {
           "label": "חדר",
           "photo": 10,
           "x": 68,
-          "y": 72
+          "y": 72,
+          "id": "lower-room-2"
         }
       ]
     }
@@ -200,14 +210,16 @@
       "role": "בוטיק נדל״ן הרצליה",
       "license": "3996915",
       "phone": "052-2505966",
-      "whatsapp": "972522505966"
+      "whatsapp": "972522505966",
+      "slug": "amir"
     },
     {
       "name": "טל גלעדי",
       "role": "בוטיק נדל״ן הרצליה",
       "license": null,
       "phone": "052-3334483",
-      "whatsapp": "972523334483"
+      "whatsapp": "972523334483",
+      "slug": "tal"
     }
   ],
   "exclusive": true,

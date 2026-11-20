@@ -584,7 +584,8 @@
     track.addEventListener('scroll', () => { if (!ticking) ticking = requestAnimationFrame(render); }, { passive: true });
     addEventListener('resize', () => { measure(); prevA.fill(-1); go(active, false); render(); });
     measure(); render();
-    const openLb = (i, c) => LB && LB.open(photos, i, c, { onClose: k => { go(k, false); if (cards[k]) cards[k].focus({ preventScroll: true }); } });
+    const count = name => { try { if (window.goatcounter && goatcounter.count) goatcounter.count({ path: name, title: name, event: true }); } catch (_) {} };
+    const openLb = (i, c) => LB && (count('gallery-open'), LB.open(photos, i, c, { onClose: k => { go(k, false); if (cards[k]) cards[k].focus({ preventScroll: true }); } }));
     cards.forEach((c, i) => c.addEventListener('click', () => {
       if (track.dataset.dragged) return;
       if (i === active) openLb(i, c); else go(i);

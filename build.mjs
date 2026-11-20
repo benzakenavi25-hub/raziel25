@@ -261,6 +261,10 @@ function img(k, { cls = '', sizes, eager = false, cover = true, defer = false } 
 }
 const agents = (d.agents || (d.agent ? [d.agent] : [])).filter(a => a && a.name);
 const visit = d.visit || null;
+// GoatCounter: on for every listing by default; "goatcounter": false in data.json turns it off, a URL overrides the endpoint
+const GC = d.goatcounter === false ? null : (d.goatcounter || 'https://benzakenavi.goatcounter.com/count');
+const gc = name => GC ? ` data-goatcounter-click="${esc(name)}"` : '';
+const agentSlug = a => { const i = (d.agents || [d.agent]).indexOf(a); return a.slug || `agent-${i + 1}`; };
 const waAgent = agents[(visit && visit.whatsappTo) || 0] || agents[0];
 const waLink = (msg, a = waAgent) => `https://wa.me/${a.whatsapp}?text=${encodeURIComponent(msg)}`;
 const telLink = a => `tel:${String(a.phone).replace(/[^\d+]/g, '').replace(/^0/, '+972')}`;
@@ -384,8 +388,8 @@ function sections() {
       <input class="ba-range" type="range" min="0" max="100" step="1" value="50" dir="ltr" aria-label="השוואה: גררו כדי לראות יותר מההדמיה או מהצילום">
     </div>`, { cls: 'ba-frame' })}
   <div class="ba-chips" role="group" aria-label="סגנון ההדמיה">
-    <button class="ba-chip" type="button" data-style="-1" aria-pressed="false"><span>כמו היום</span><small>הצילום בלבד</small></button>
-    ${sg.styles.map((x, i) => `<button class="ba-chip" type="button" data-style="${i}" aria-pressed="${i === 0}"><span>${esc(x.name)}</span><small>${esc(x.sub || 'סגנון ' + ['א׳', 'ב׳', 'ג׳', 'ד׳'][i])}</small></button>`).join('\n    ')}
+    <button class="ba-chip" type="button"${gc('style-real')} data-style="-1" aria-pressed="false"><span>כמו היום</span><small>הצילום בלבד</small></button>
+    ${sg.styles.map((x, i) => `<button class="ba-chip" type="button"${gc('style-' + 'abcd'[i])} data-style="${i}" aria-pressed="${i === 0}"><span>${esc(x.name)}</span><small>${esc(x.sub || 'סגנון ' + ['א׳', 'ב׳', 'ג׳', 'ד׳'][i])}</small></button>`).join('\n    ')}
   </div>
   ${sg.note ? `<p class="ba-note" data-fade>${esc(sg.note)}</p>` : ''}
 </section>` : '';
@@ -403,7 +407,7 @@ function sections() {
   <div class="pl-stage">
     ${fl.map((f, j) => `<article class="pl-floor${j === 0 ? ' is-on' : ''}" data-f="${j}" aria-label="${esc(f.he)}">
       <div class="pl-plan"><div class="pl-draw" style="--ar:${(f.plan.w / f.plan.h).toFixed(4)}"><span class="pl-ink" style="-webkit-mask-image:url('${f.plan.src}');mask-image:url('${f.plan.src}')"></span>
-        ${(f.spots || []).map((p, k) => { const sk = K.spots[f.i][k], im = IMG[sk]; return `<button class="spot${p.x > 66 ? ' spot-l' : ''}" type="button" style="left:${p.x}%;top:${p.y}%" data-label="${esc(p.label)}" data-floor="${esc(f.label)}" data-src="${im.src[1000]}" data-srcset="${srcset(im.src)}" data-alt="${alt(sk)}" data-w="${im.w}" data-h="${im.h}" aria-haspopup="dialog" aria-label="לצפייה: ${esc(p.label)}"><i class="spot-dot" aria-hidden="true"></i><span class="spot-label">${esc(p.label)}</span></button>`; }).join('')}
+        ${(f.spots || []).map((p, k) => { const sk = K.spots[f.i][k], im = IMG[sk]; return `<button class="spot${p.x > 66 ? ' spot-l' : ''}" type="button"${gc('plan-' + (p.id || p.label))} style="left:${p.x}%;top:${p.y}%" data-label="${esc(p.label)}" data-floor="${esc(f.label)}" data-src="${im.src[1000]}" data-srcset="${srcset(im.src)}" data-alt="${alt(sk)}" data-w="${im.w}" data-h="${im.h}" aria-haspopup="dialog" aria-label="לצפייה: ${esc(p.label)}"><i class="spot-dot" aria-hidden="true"></i><span class="spot-label">${esc(p.label)}</span></button>`; }).join('')}
         <button class="pl-zoom" type="button" aria-label="פתיחת התוכנית של ${esc(f.he)} במסך מלא" data-src="${f.plan.src}" data-w="${f.plan.w}" data-h="${f.plan.h}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>${d.planNote ? `<p class="pl-note">${esc(d.planNote)}</p>` : ''}</div>
       <div class="pl-info">
         <div class="pl-text">
@@ -495,11 +499,11 @@ function sections() {
   ${head(L.visit, visit.title)}
   ${visit.sub ? `<p class="visit-sub" data-fade>${nums(visit.sub)}</p>` : ''}
   <div class="slots">
-    ${(visit.slots || []).map(s => `<button class="slot" data-fade type="button" data-slot="${esc(s)}" aria-expanded="false" aria-controls="send-to"><span>${esc(s)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>`).join('\n    ')}
+    ${(visit.slots || []).map((s, si) => `<button class="slot" data-fade type="button"${gc('slot-' + (si + 1))} data-slot="${esc(s)}" aria-expanded="false" aria-controls="send-to"><span>${esc(s)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>`).join('\n    ')}
   </div>
   <div class="send-to" id="send-to" data-msg="${esc(visit.message)}" hidden>
     <p class="send-q">למי לשלוח?</p>
-    <div class="send-btns">${agents.filter(a => a.whatsapp).map(a => `<a class="send-btn" data-wa="${esc(a.whatsapp)}" href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener">${WA_ICON}<span>וואטסאפ ל${esc(a.name.split(' ')[0])}</span></a>`).join('')}</div>
+    <div class="send-btns">${agents.filter(a => a.whatsapp).map(a => `<a class="send-btn"${gc('wa-' + agentSlug(a))} data-wa="${esc(a.whatsapp)}" href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener">${WA_ICON}<span>וואטסאפ ל${esc(a.name.split(' ')[0])}</span></a>`).join('')}</div>
   </div>
 </section>` : '';
   S.agents = agents.length ? `
@@ -510,8 +514,8 @@ function sections() {
       <p class="agent-name">${esc(a.name)}</p>
       <p class="agent-meta">${[a.role ? esc(a.role) : '', a.license ? `רישיון <bdi>${esc(a.license)}</bdi>` : ''].filter(Boolean).join(' · ')}</p>
       <div class="agent-actions">
-        <a class="agent-phone num" href="${telLink(a)}" dir="ltr" aria-label="להתקשר ל${esc(a.name)}: ${esc(a.phone)}">${esc(a.phone)}</a>
-        ${a.whatsapp ? `<a class="btn-outline" href="${esc(waLink(baseMsg(), a))}" target="_blank" rel="noopener" aria-label="וואטסאפ ל${esc(a.name)}">${WA_ICON}<span>וואטסאפ</span></a>` : ''}
+        <a class="agent-phone num"${gc('call-' + agentSlug(a))} href="${telLink(a)}" dir="ltr" aria-label="להתקשר ל${esc(a.name)}: ${esc(a.phone)}">${esc(a.phone)}</a>
+        ${a.whatsapp ? `<a class="btn-outline"${gc('wa-' + agentSlug(a))} href="${esc(waLink(baseMsg(), a))}" target="_blank" rel="noopener" aria-label="וואטסאפ ל${esc(a.name)}">${WA_ICON}<span>וואטסאפ</span></a>` : ''}
       </div>
     </div>`).join('\n    ')}
   </div>
@@ -580,13 +584,15 @@ function writeSubPages(ver) {
   <p>אם משהו באתר לא נגיש לכם, נשמח לשמוע ולתקן. אפשר לפנות אל:<br>${contact}</p>
   <p class="doc-date">עודכן: ${esc(updated)}</p>`);
   const priv = subPage('מדיניות פרטיות', `
-  <p>האתר של ${esc(d.title)} הוא דף מידע על נכס. אין בו טפסים, הרשמה או מעקב.</p>
+  <p>האתר של ${esc(d.title)} הוא דף מידע על נכס. אין בו טפסים או הרשמה.</p>
   <h2>מה אנחנו אוספים</h2>
-  <p>שום דבר. האתר לא שומר עוגיות, לא מפעיל כלי אנליטיקה או פרסום, ולא שומר מידע שלכם.</p>
+  <p>שום מידע אישי. האתר לא שומר עוגיות, לא מפעיל פרסום, ולא שומר מידע שלכם.</p>
+  ${GC ? '<p>האתר משתמש ב-GoatCounter לספירת צפיות ולחיצות באופן אנונימי, ללא עוגיות.</p>' : ''}
   <h2>שירותים חיצוניים</h2>
   <ul>
     <li>האתר מאוחסן ב־GitHub Pages, שעשוי לרשום נתוני גישה טכניים (כמו כתובת IP) לצורכי אבטחה.</li>
     <li>גופנים נטענים מ־Google Fonts, וספריות אנימציה מ־cdnjs ו־unpkg.</li>
+    ${GC ? '<li>ספירת הצפיות והלחיצות נעשית ב־GoatCounter (gc.zgo.at), ללא עוגיות וללא זיהוי אישי.</li>' : ''}
     <li>לחיצה על כפתור וואטסאפ או טלפון פותחת את האפליקציה במכשיר שלכם. ההודעה נשלחת רק אם תבחרו לשלוח אותה.</li>
     <li>"פתיחה במפה" מעבירה ל־Google Maps.</li>
   </ul>
@@ -612,8 +618,9 @@ const vars = {
   robots: d.indexable ? '' : '<meta name="robots" content="noindex, nofollow">',
   preload: `<link rel="preload" as="image" imagesrcset="${srcset(IMG[K.hero].src)}" imagesizes="(min-width: 900px) 60vw, calc(100vw - 48px)" fetchpriority="high">`,
   brand: esc(d.title),
-  cta: waAgent ? `<a class="pill is-hidden" href="${esc(waLink(baseMsg()))}" target="_blank" rel="noopener">${WA_ICON}<span>לתיאום ביקור</span></a>` : '',
+  cta: waAgent ? `<a class="pill is-hidden"${gc('wa-' + agentSlug(waAgent))} href="${esc(waLink(baseMsg()))}" target="_blank" rel="noopener">${WA_ICON}<span>לתיאום ביקור</span></a>` : '',
   v: ver,
+  analytics: GC ? `<script data-goatcounter="${esc(GC)}" async src="//gc.zgo.at/count.js"></script>` : '',
   ...Object.fromEntries(Object.entries(S).map(([k, v]) => ['section_' + k, v]))
 };
 let html = fs.readFileSync(path.join(ROOT, 'template', 'page.html'), 'utf8');

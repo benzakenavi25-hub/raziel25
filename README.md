@@ -34,3 +34,4 @@ build.mjs              node build.mjs <slug>  →  index.html, accessibility.htm
 - Floor plans are rendered from the PDFs as they are (darkness → alpha, painted in the accent colour). Nothing is redrawn.
 - Every photo is exported as WebP at 1000 and 2000 px. `og.jpg` is a 1200×630 crop of the hero.
 - `indexable: false` adds `noindex`. Set `url` in `data.json` to the live address: the OG image needs an absolute URL.
+- Analytics: GoatCounter (no cookies) is on by default for every listing. Click events: `wa-<agent>`, `call-<agent>` (agent `slug` in data.json), `slot-<n>`, `style-a/b/real`, `plan-<room id>` (`floors[i].spots[k].id`), `gallery-open`. `"goatcounter": false` turns it off; a URL overrides the endpoint. The privacy page mentions it automatically.
