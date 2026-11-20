@@ -56,9 +56,11 @@
   initGallery();
   const BA = initBeforeAfter();
   initPlanTaps();
+  const SHEET = initRoomSheet();
+  initVisit();
 
   /* ---------------- top bar · progress · dark wash · pill (plain scroll listener: cheap) ---------------- */
-  const bar = $('.topbar'), prog = $('.progress i'), hero = $('#hero'), facts = $('#facts'), sig = $('#house'), motif = $('.motif');
+  const bar = $('.topbar'), prog = $('.progress i'), hero = $('#hero'), facts = $('#facts'), sig = $('#house .sig-stage'), motif = $('.motif');
   const darkMotif = root.dataset.theme !== 'light';
   let lastY = scrollY;
   const sizeMotif = () => { if (!darkMotif || !motif) return; motif.style.height = Math.ceil(innerHeight + Math.max(0, root.scrollHeight - innerHeight) * 0.1 + 2) + 'px'; };
@@ -73,7 +75,7 @@
     if (facts) {
       // the dark section: crossfade in over its first ~30%, back out over its last ~25%
       const r = facts.getBoundingClientRect(), h = innerHeight;
-      const inP = clamp01((h - r.top) / (r.height * 0.3));
+      const inP = clamp01((h * 0.6 - r.top) / (h * 0.4));   // starts once the section's top passes 60% of the screen (the price above stays light)
       const outP = clamp01((h * 0.55 - r.bottom) / (h * 0.45));
       w = r.top > h ? 0 : smooth(inP) * (1 - smooth(outP));
       root.style.setProperty('--wash', w.toFixed(3));
@@ -85,10 +87,10 @@
 
   /* ---------------- floating pill: never in pinned sequences or the hero, gone from the visit section on ---------------- */
   const pill = $('.pill');
-  const noPillZones = ['#hero', '#house', '#story', '#plan'].map(s => $(s)).filter(Boolean);
+  const noPillZones = ['#hero', '#house .sig-stage', '#story', '#plan'].map(s => $(s)).filter(Boolean);
   const visit = $('#visit');
   const guard = $$('.sh, .story-line, .price-sub, .extras, .loc-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
-  const frames = $$('.frame').filter(f => !f.closest('#story, #plan, #hero'));
+  const frames = $$('.frame').filter(f => !f.closest('#story, #plan, #hero, .room-sheet'));
   let pillHidden = true;
   function updatePill() {
     if (!pill) return;
@@ -101,6 +103,7 @@
     }
     if (!hide && visit && visit.getBoundingClientRect().top < h) hide = true;
     if (!hide && LB && LB.isOpen()) hide = true;
+    if (!hide && root.classList.contains('sheet-open')) hide = true;
     if (!hide) {
       const zoneTop = h - 20 - 44 - 16, half = 130, mid = vw / 2;
       hide = guard.some(el => {
@@ -230,10 +233,10 @@
       defaults: { ease: 'none' },
       scrollTrigger: { trigger: sig, start: 'top top', end: () => '+=' + Math.round(innerHeight * 1.7), pin: true, scrub: 0.6, invalidateOnRefresh: true, anticipatePin: 1 }
     });
-    tl.fromTo(im, { x: 0, scale: 1.05 }, { x: () => Math.max(0, im.offsetWidth - innerWidth), scale: 1, duration: 1 }, 0);
+    tl.fromTo(im, { x: 0, scale: 1 }, { x: () => Math.max(0, im.offsetWidth - innerWidth), scale: 1.08, duration: 1 }, 0);
     const lab = $('.sh-label', sh), lns = $$('.ln > span', sh), rule = $('.sh-rule', sh);
     tl.fromTo(lab, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.1, ease: 'power2.out' }, 0.08)
-      .fromTo(lns, { yPercent: 105 }, { yPercent: 0, duration: 0.14, stagger: 0.03, ease: 'power3.out' }, 0.12)
+      .fromTo(lns, { yPercent: 105, y: 0 }, { yPercent: 0, duration: 0.14, stagger: 0.03, ease: 'power3.out' }, 0.12)
       .fromTo(rule, { scaleX: 0 }, { scaleX: 1, duration: 0.12, ease: 'power2.inOut' }, 0.24);
     if (sub) tl.fromTo(sub, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.14, ease: 'power2.out' }, 0.3);
     jumps['#house'] = () => tl.scrollTrigger.start + (tl.scrollTrigger.end - tl.scrollTrigger.start) * 0.4;
@@ -281,7 +284,7 @@
   const plan = $('#plan');
   if (plan) {
     const tabs = $$('.pl-tab', plan), barFill = $('.pl-bar b', plan);
-    const parts = $$('.pl-floor', plan).map(f => ({ f, ink: $('.pl-ink', f), note: $('.pl-note', f), en: $('.pl-en', f), lis: $$('.pl-rooms li', f), fr: $('.pl-photo', f), inner: $('.pl-photo .frame-in', f) }));
+    const parts = $$('.pl-floor', plan).map(f => ({ f, ink: $('.pl-ink', f), note: $('.pl-note', f), en: $('.pl-en', f), lis: $$('.pl-rooms li', f), fr: $('.pl-photo', f), inner: $('.pl-photo .frame-in', f), spots: $$('.spot', f) }));
     const n = parts.length;
     parts.forEach(p => { gsap.set(p.ink, { clipPath: 'inset(0% 100% 0% 0%)' }); gsap.set([p.note, p.en, ...p.lis].filter(Boolean), { opacity: 0 }); if (p.fr) { hideFrame(p.fr); gsap.set(p.fr, { opacity: 0 }); } });
     parts[0].f.classList.remove('is-on');
@@ -301,6 +304,7 @@
         .fromTo(nu.ink, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'power2.inOut' }, at + 0.1)
         .fromTo([nu.note, nu.en].filter(Boolean), { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'power1.out' }, at + 0.6)
         .fromTo(nu.lis, { opacity: 0, y: 10, '--s': 0 }, { opacity: 1, y: 0, '--s': 1, duration: 0.5, stagger: 0.08, ease: 'power2.out' }, at + 0.7);
+      if (nu.spots.length) stl.fromTo(nu.spots, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.45, stagger: 0.07, ease: 'back.out(2)' }, at + 0.85);
       if (nu.fr) {
         stl.fromTo(nu.fr, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.55, ease: 'back.out(1.5)' }, at + 0.8);
         drawFrame(stl, nu.fr, at + 0.9, 0.5, nu.fr.offsetWidth, nu.fr.offsetHeight);
@@ -508,8 +512,9 @@
   }
 
   function initPlanTaps() {
-    $$('.pl-draw').forEach(b => b.addEventListener('click', () => {
+    $$('.pl-zoom').forEach(b => b.addEventListener('click', () => {
       if (!LB) return;
+      if (SHEET) SHEET.close(true);
       const f = b.closest('.pl-floor'), name = f ? f.getAttribute('aria-label') : '';
       LB.open([{ src: b.dataset.src, alt: `תוכנית ${name}`, w: +b.dataset.w, h: +b.dataset.h }], 0, b, { zoom: true });
     }));
@@ -581,6 +586,86 @@
       go(Math.round((track.scrollLeft - d.v * 220) / W));
       setTimeout(() => { delete track.dataset.dragged; }, 50);
     });
+  }
+
+  /* ---- the room sheet: a hotspot on the plan opens that room's photo (sheet from the bottom / popover). One at a time. ---- */
+  function initRoomSheet() {
+    const sh = $('.room-sheet');
+    if (!sh) return null;
+    const panel = $('.rs-panel', sh), im = $('.rs-img', sh), title = $('.rs-title', sh), en = $('.rs-en', sh), closeBtn = $('.rs-close', sh), fr = $('.rs-frame', sh);
+    let opener = null, open = false;
+    const anim = () => !!window.gsap && !reduce;
+    const show = btn => {
+      opener = btn;
+      im.removeAttribute('src');
+      im.srcset = btn.dataset.srcset; im.sizes = '(min-width: 900px) 700px, calc(100vw - 68px)'; im.src = btn.dataset.src; im.alt = btn.dataset.alt;
+      im.width = +btn.dataset.w; im.height = +btn.dataset.h;
+      title.textContent = btn.dataset.label; en.textContent = btn.dataset.floor || '';
+      if (!open) {
+        open = true; sh.hidden = false;
+        root.classList.add('sheet-open'); if (lenis) lenis.stop();
+        if (anim()) {
+          const wide = innerWidth >= 900;
+          gsap.fromTo($('.rs-scrim', sh), { opacity: 0 }, { opacity: 1, duration: 0.3 });
+          gsap.fromTo(panel, wide ? { opacity: 0, y: 24, scale: 0.97 } : { yPercent: 100 }, wide ? { opacity: 1, y: 0, scale: 1, duration: 0.45 } : { yPercent: 0, duration: 0.5, ease: 'power3.out' });
+        }
+      }
+      if (anim()) { gsap.fromTo(fr, { opacity: 0 }, { opacity: 1, duration: 0.4 }); }
+      closeBtn.focus({ preventScroll: true });
+      updatePill();
+    };
+    const close = (instant) => {
+      if (!open) return; open = false;
+      const done = () => { sh.hidden = true; if (window.gsap) gsap.set(panel, { clearProps: 'transform,opacity' }); root.classList.remove('sheet-open'); if (lenis) lenis.start(); if (opener && instant !== true) opener.focus({ preventScroll: true }); updatePill(); };
+      if (anim() && instant !== true) {
+        const wide = innerWidth >= 900;
+        gsap.to($('.rs-scrim', sh), { opacity: 0, duration: 0.25 });
+        gsap.to(panel, wide ? { opacity: 0, y: 16, duration: 0.25, ease: 'power2.in', onComplete: done } : { yPercent: 100, y: 0, duration: 0.32, ease: 'power2.in', onComplete: done });
+      } else done();
+    };
+    $$('.spot').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); show(b); }));
+    closeBtn.addEventListener('click', () => close());
+    $('.rs-scrim', sh).addEventListener('click', () => close());
+    sh.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+      else if (e.key === 'Tab') { e.preventDefault(); closeBtn.focus(); }
+    });
+    // swipe down to close (phones)
+    let drag = null;
+    panel.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' || panel.scrollTop > 0) return; drag = { y: e.clientY, id: e.pointerId, dy: 0 }; });
+    panel.addEventListener('pointermove', e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      if (drag.dy > 4) { try { panel.setPointerCapture(e.pointerId); } catch (_) {} panel.style.transform = `translate3d(0, ${drag.dy}px, 0)`; }
+    });
+    const end = e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dy = drag.dy; drag = null;
+      if (dy > 80) close();
+      else if (dy > 0) { if (window.gsap) gsap.to(panel, { y: 0, duration: 0.25, onComplete: () => { panel.style.transform = ''; } }); else panel.style.transform = ''; }
+    };
+    panel.addEventListener('pointerup', end); panel.addEventListener('pointercancel', end);
+    panel.addEventListener('touchmove', e => { if (drag && drag.dy > 4) e.preventDefault(); }, { passive: false });
+    return { close, isOpen: () => open };
+  }
+
+  /* ---- the visit: pick a time, then who to send it to ---- */
+  function initVisit() {
+    const panel = $('#send-to'), slots = $$('.slot');
+    if (!panel || !slots.length) return;
+    const msg = panel.dataset.msg, btns = $$('.send-btn', panel);
+    let cur = null;
+    slots.forEach(sl => sl.addEventListener('click', () => {
+      const same = cur === sl;
+      slots.forEach(x => { x.classList.toggle('is-on', x === sl && !same); x.setAttribute('aria-expanded', x === sl && !same ? 'true' : 'false'); });
+      if (same) { cur = null; panel.hidden = true; return; }
+      cur = sl;
+      const text = msg.replace('{slot}', sl.dataset.slot);
+      btns.forEach(b => { b.href = `https://wa.me/${b.dataset.wa}?text=${encodeURIComponent(text)}`; });
+      sl.after(panel);
+      panel.hidden = false;
+      if (window.gsap && !reduce) gsap.fromTo(panel, { height: 0, opacity: 0 }, { height: 'auto', opacity: 1, duration: 0.4, ease: 'power2.out' });
+    }));
   }
 
   /* ---- before / after: drag anywhere on the photo (horizontal intent), arrow keys via the range input, style chips ---- */

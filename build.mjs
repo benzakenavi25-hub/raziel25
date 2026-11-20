@@ -37,6 +37,8 @@ const K = {
   hero: use(P.hero), sig: use(P.signature), location: use(P.location),
   story: (d.story || []).map(s => use(s.photo)),
   floors: floors.map(f => use(f.photo)),
+  spots: floors.map(f => (f.spots || []).map(p => use(p.photo))),
+  garden: (d.gardenPhotos || []).map(g => use(g.photo)),
   gallery: (d.gallery || []).map(g => use(g.photo)),
 };
 const fullscreen = new Set((P.fullscreen || [P.hero, P.signature]).map(String));
@@ -315,13 +317,18 @@ function sections() {
 
   /* signature (full-bleed, pinned) */
   S.sig = K.sig ? `
-<section class="sig" id="house" aria-label="${esc(d.signature || d.title)}">
+<section class="sig" id="house" aria-label="${esc(L.house || d.signature || d.title)}">
+  <div class="sig-stage">
   <div class="sig-pan">${img(K.sig, { cls: 'sig-img', cover: false, sizes: coverSizes(K.sig) })}</div>
   <div class="sig-shade"></div>
   <div class="sig-text">
     ${head(L.house, d.signature)}
     ${d.signatureSub ? `<p class="sig-sub">${nums(d.signatureSub)}</p>` : ''}
   </div>
+  </div>
+  ${K.garden.length ? `<div class="sig-more">
+    ${d.gardenPhotos.map((g, i) => `<figure class="sig-fig">${frame(img(K.garden[i], { sizes: '(min-width: 900px) 42vw, calc(100vw - 48px)' }), { cls: 'sig-frame' })}<figcaption class="sig-cap"><span class="label-en" lang="en">${esc(g.latin)}</span> · ${esc(g.he)}</figcaption></figure>`).join('\n    ')}
+  </div>` : ''}
 </section>` : '';
 
   /* story */
@@ -356,7 +363,7 @@ function sections() {
     </div>`, { cls: 'ba-frame' })}
   <div class="ba-chips" role="group" aria-label="סגנון ההדמיה">
     <button class="ba-chip" type="button" data-style="-1" aria-pressed="false"><span>כמו היום</span><small>הצילום בלבד</small></button>
-    ${sg.styles.map((x, i) => `<button class="ba-chip" type="button" data-style="${i}" aria-pressed="${i === 0}"><span>סגנון ${['א׳', 'ב׳', 'ג׳', 'ד׳'][i]}</span><small>${esc(x.name)}</small></button>`).join('\n    ')}
+    ${sg.styles.map((x, i) => `<button class="ba-chip" type="button" data-style="${i}" aria-pressed="${i === 0}"><span>${esc(x.name)}</span><small>${esc(x.sub || 'סגנון ' + ['א׳', 'ב׳', 'ג׳', 'ד׳'][i])}</small></button>`).join('\n    ')}
   </div>
   ${sg.note ? `<p class="ba-note" data-fade>${esc(sg.note)}</p>` : ''}
 </section>` : '';
@@ -367,12 +374,15 @@ function sections() {
 <section class="plan" id="plan" aria-label="${esc(d.planTitle || 'התוכנית')}">
   <div class="plan-bg" aria-hidden="true"></div>
   <div class="plan-head">${head(L.plan, d.planTitle)}</div>
+  ${d.planHint && fl.some(f => (f.spots || []).length) ? `<p class="pl-hint">${esc(d.planHint)}</p>` : ''}
   <nav class="pl-nav" aria-label="קומות"><ol>
     ${fl.map((f, j) => `<li><button class="pl-tab${j === 0 ? ' is-on' : ''}" type="button" data-f="${j}" aria-current="${j === 0 ? 'true' : 'false'}"><b class="num" dir="ltr">${esc(String(f.num).replace('-', '−'))}</b><span>${esc(f.he)}</span></button></li>`).join('\n    ')}
   </ol><i class="pl-bar" aria-hidden="true"><b></b></i></nav>
   <div class="pl-stage">
     ${fl.map((f, j) => `<article class="pl-floor${j === 0 ? ' is-on' : ''}" data-f="${j}" aria-label="${esc(f.he)}">
-      <div class="pl-plan"><button class="pl-draw" type="button" aria-label="פתיחת התוכנית של ${esc(f.he)} במסך מלא" data-src="${f.plan.src}" data-w="${f.plan.w}" data-h="${f.plan.h}" style="aspect-ratio:${f.plan.w}/${f.plan.h}"><span class="pl-ink" style="-webkit-mask-image:url('${f.plan.src}');mask-image:url('${f.plan.src}')"></span></button>${d.planNote ? `<p class="pl-note">${esc(d.planNote)}</p>` : ''}</div>
+      <div class="pl-plan"><div class="pl-draw" style="--ar:${(f.plan.w / f.plan.h).toFixed(4)}"><span class="pl-ink" style="-webkit-mask-image:url('${f.plan.src}');mask-image:url('${f.plan.src}')"></span>
+        ${(f.spots || []).map((p, k) => { const sk = K.spots[f.i][k], im = IMG[sk]; return `<button class="spot${p.x > 66 ? ' spot-l' : ''}" type="button" style="left:${p.x}%;top:${p.y}%" data-label="${esc(p.label)}" data-floor="${esc(f.label)}" data-src="${im.src[1000]}" data-srcset="${srcset(im.src)}" data-alt="${alt(sk)}" data-w="${im.w}" data-h="${im.h}" aria-haspopup="dialog" aria-label="לצפייה: ${esc(p.label)}"><i class="spot-dot" aria-hidden="true"></i><span class="spot-label">${esc(p.label)}</span></button>`; }).join('')}
+        <button class="pl-zoom" type="button" aria-label="פתיחת התוכנית של ${esc(f.he)} במסך מלא" data-src="${f.plan.src}" data-w="${f.plan.w}" data-h="${f.plan.h}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>${d.planNote ? `<p class="pl-note">${esc(d.planNote)}</p>` : ''}</div>
       <div class="pl-info">
         <div class="pl-text">
           <p class="pl-en label-en" lang="en">${esc(f.label)}</p>
@@ -382,7 +392,14 @@ function sections() {
       </div>
     </article>`).join('\n    ')}
   </div>
-</section>` : '';
+</section>
+<div class="room-sheet" role="dialog" aria-modal="true" aria-labelledby="rs-title" hidden>
+  <div class="rs-scrim"></div>
+  <div class="rs-panel"><i class="rs-grab" aria-hidden="true"></i>
+    <div class="rs-head"><div><p class="rs-en label-en" lang="en"></p><h3 class="rs-title" id="rs-title"></h3></div><button class="rs-close" type="button" aria-label="סגירה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    ${frame('<img class="rs-img" alt="" decoding="async">', { cls: 'rs-frame', reveal: false })}
+  </div>
+</div>` : '';
 
   /* price */
   S.price = d.price != null ? `
@@ -456,7 +473,11 @@ function sections() {
   ${head(L.visit, visit.title)}
   ${visit.sub ? `<p class="visit-sub" data-fade>${nums(visit.sub)}</p>` : ''}
   <div class="slots">
-    ${(visit.slots || []).map(s => `<a class="slot" data-fade href="${esc(waLink(visit.message.replace('{slot}', s)))}" target="_blank" rel="noopener"><span>${esc(s)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></a>`).join('\n    ')}
+    ${(visit.slots || []).map(s => `<button class="slot" data-fade type="button" data-slot="${esc(s)}" aria-expanded="false" aria-controls="send-to"><span>${esc(s)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>`).join('\n    ')}
+  </div>
+  <div class="send-to" id="send-to" data-msg="${esc(visit.message)}" hidden>
+    <p class="send-q">למי לשלוח?</p>
+    <div class="send-btns">${agents.filter(a => a.whatsapp).map(a => `<a class="send-btn" data-wa="${esc(a.whatsapp)}" href="https://wa.me/${esc(a.whatsapp)}" target="_blank" rel="noopener">${WA_ICON}<span>וואטסאפ ל${esc(a.name.split(' ')[0])}</span></a>`).join('')}</div>
   </div>
 </section>` : '';
   S.agents = agents.length ? `
