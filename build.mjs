@@ -121,7 +121,16 @@ async function processPhotos() {
     }
     console.log(`photo ${key.padEnd(4)} ${w}×${h}${crop ? ' (crop)' : ''}  wb ${g.gain.map(v => v.toFixed(3)).join('/')}`);
   }
-  // og.jpg: 1200x630 crop of the hero, respecting its focal point
+  // og.jpg: 1200x630. photos.og = { photo, box: [l, t, w, h] } picks the photo and the crop; otherwise the hero around its focal point
+  if (P.og && P.og.photo != null) {
+    const o = graded[P.og.photo] || await grade(srcFile(P.og.photo));
+    const [l, t, w, hh] = P.og.box || [0, 0, 1, 1];
+    const box = { left: Math.round(l * o.width), top: Math.round(t * o.height), width: Math.round(w * o.width), height: Math.round(hh * o.height) };
+    const buf = await sharp(o.buf, { raw: { width: o.width, height: o.height, channels: 3 } }).extract(box)
+      .resize(1200, 630, { fit: 'cover', kernel: 'lanczos3' }).sharpen({ sigma: 0.6 }).jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+    fs.writeFileSync(path.join(ROOT, 'og.jpg'), buf); hash.update(buf);
+    return;
+  }
   const h = graded[P.hero];
   const [fx, fy] = ((P.focus || {})[P.hero] || '50% 50%').split(' ').map(v => parseFloat(v) / 100);
   const scale = Math.max(1200 / h.width, 630 / h.height), W = Math.round(h.width * scale), H = Math.round(h.height * scale);
@@ -598,7 +607,7 @@ const ver = hash.update(fs.readFileSync(path.join(ROOT, 'template', 'styles.css'
 const pageTitle = d.pageTitle || `${d.title} · ${d.type}${d.isNew ? ' חדש' : ''} ב${d.area}`;
 const vars = {
   title: esc(pageTitle), description: esc(d.ogDescription || ''),
-  url: esc(d.url || ''), og: esc((d.url || '') + 'og.jpg'),
+  url: esc(d.url || ''), og: esc((d.url || '') + 'og.jpg?v=' + ver),
   theme: THEME, themeColor: THEME === 'light' ? '#F2EDE6' : '#1E1915', intro: INTRO,
   robots: d.indexable ? '' : '<meta name="robots" content="noindex, nofollow">',
   preload: `<link rel="preload" as="image" imagesrcset="${srcset(IMG[K.hero].src)}" imagesizes="(min-width: 900px) 60vw, calc(100vw - 48px)" fetchpriority="high">`,
