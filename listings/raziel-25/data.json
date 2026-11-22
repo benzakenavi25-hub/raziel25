@@ -20,8 +20,6 @@
     "6 חד׳"
   ],
   "ogDescription": "₪6,490,000 · 205 מ״ר בנוי · מגרש 224 מ״ר · 2 גינות · 6 חדרים",
-  "planTitle": "הבית, קומה אחרי קומה.",
-  "planNote": "תוכניות להמחשה בלבד",
   "planCrop": [
     0.031,
     0.049,
@@ -30,61 +28,15 @@
   ],
   "floors": [
     {
-      "id": "ground",
-      "label": "ENTRANCE FLOOR",
-      "he": "קומת כניסה",
-      "num": "00",
-      "plan": "כניסה",
-      "photo": 24,
-      "rooms": [
-        "מטבח שף עם אי",
-        "פינת אוכל",
-        "סלון",
-        "יציאה לשתי הגינות"
-      ],
-      "spots": [
-        {
-          "label": "מטבח",
-          "photo": 23,
-          "x": 24,
-          "y": 38,
-          "id": "kitchen"
-        },
-        {
-          "label": "סלון",
-          "photo": 28,
-          "x": 78,
-          "y": 72,
-          "id": "living"
-        },
-        {
-          "label": "פינת אוכל",
-          "photo": 33,
-          "x": 75,
-          "y": 30,
-          "id": "dining"
-        },
-        {
-          "label": "מדרגות",
-          "photo": 19,
-          "x": 30,
-          "y": 82,
-          "id": "stairs"
-        }
-      ]
-    },
-    {
       "id": "first",
-      "label": "FIRST FLOOR",
-      "he": "קומה ראשונה",
       "num": "01",
+      "he": "קומה ראשונה",
+      "label": "FIRST FLOOR",
+      "elevation": "+3.12",
+      "ceiling": "2.67",
+      "photo": 14,
+      "rooms": "2 סוויטות · חדרי רחצה מעוצבים · חדר ארונות",
       "plan": "ראשונה",
-      "photo": 15,
-      "rooms": [
-        "2 סוויטות",
-        "חדרי רחצה מעוצבים",
-        "חדר ארונות"
-      ],
       "spots": [
         {
           "label": "סוויטת הורים",
@@ -117,17 +69,56 @@
       ]
     },
     {
+      "id": "ground",
+      "num": "00",
+      "he": "קומת כניסה",
+      "label": "ENTRANCE FLOOR",
+      "elevation": "±0.00",
+      "ceiling": "2.73",
+      "photo": 28,
+      "rooms": "סלון · מטבח שף · פינת אוכל · יציאה לגינות",
+      "plan": "כניסה",
+      "spots": [
+        {
+          "label": "מטבח",
+          "photo": 23,
+          "x": 24,
+          "y": 38,
+          "id": "kitchen"
+        },
+        {
+          "label": "סלון",
+          "photo": 28,
+          "x": 78,
+          "y": 72,
+          "id": "living"
+        },
+        {
+          "label": "פינת אוכל",
+          "photo": 33,
+          "x": 75,
+          "y": 30,
+          "id": "dining"
+        },
+        {
+          "label": "מדרגות",
+          "photo": 19,
+          "x": 30,
+          "y": 82,
+          "id": "stairs"
+        }
+      ]
+    },
+    {
       "id": "basement",
-      "label": "LOWER FLOOR",
+      "num": "−1",
       "he": "מרתף",
-      "num": "-1",
+      "label": "LOWER FLOOR",
+      "elevation": "−3.13",
+      "ceiling": "2.70",
+      "photo": 18,
+      "rooms": "3 חדרים גדולים · משרד, חדר כושר, חדר אורחים",
       "plan": "מרתף",
-      "photo": 14,
-      "rooms": [
-        "3 חדרים גדולים",
-        "חדר רחצה",
-        "חדר כביסה"
-      ],
       "spots": [
         {
           "label": "חדר",
@@ -246,15 +237,15 @@
     "note": "בבלעדיות · בוטיק נדל״ן"
   },
   "labels": {
+    "floors": "THE FLOORS",
     "house": "THE HOUSE",
     "imagine": "IMAGINE",
-    "plan": "THE PLAN",
     "price": "THE PRICE",
     "gallery": "GALLERY",
     "visit": "PRIVATE TOUR"
   },
   "menu": {
-    "plan": "התוכנית",
+    "floors": "הקומות",
     "imagine": "לדמיין",
     "price": "מחיר",
     "gallery": "גלריה",
@@ -262,7 +253,7 @@
     "visit": "תיאום ביקור"
   },
   "menuOrder": [
-    "plan",
+    "floors",
     "imagine",
     "price",
     "gallery",
@@ -415,7 +406,6 @@
       "he": "חדר"
     }
   ],
-  "planHint": "לחצו על חדר ותיכנסו אליו.",
   "priceSignature": "להיכנס עם מזוודות. כניסה מיידית.",
   "film": {
     "slides": [
@@ -453,5 +443,8 @@
     "photo": 44,
     "line": "רחוב של בתים פרטיים בלבד, בלב הרצליה הצעירה.",
     "mapsQuery": "דוד רזיאל 25 הרצליה"
-  }
+  },
+  "floorsDefault": "ground",
+  "floorsTitle": "הבית, קומה אחרי קומה.",
+  "floorsHint": "לחצו על חדר כדי לראות אותו. תוכניות להמחשה בלבד."
 }

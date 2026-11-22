@@ -1,5 +1,5 @@
 /* Listing template v5 · motion: door (or elevator) intro · hero cascade · signature pan · film hero + opening · before/after ·
-   pinned floor plans · price odometer + grid · menu · coverflow · zoomable lightbox. */
+   floors (photo | plan) · price odometer + grid · menu · coverflow · zoomable lightbox. */
 (() => {
   'use strict';
   const $ = (s, r = document) => r.querySelector(s);
@@ -59,8 +59,8 @@
   const LB = initLightbox();
   initGallery();
   const BA = initBeforeAfter();
-  initPlanTaps();
   const SHEET = initRoomSheet();
+  initFloors();
   initVisit();
 
   /* ---------------- top bar · progress · pill (plain scroll listener: cheap) ---------------- */
@@ -81,10 +81,10 @@
 
   /* ---------------- floating pill: never in pinned sequences or the hero, gone from the visit section on ---------------- */
   const pill = $('.pill');
-  const noPillZones = ['#hero', '#house .sig-stage', '#gardens .gd-stage', '#plan'].map(s => $(s)).filter(Boolean);
+  const noPillZones = ['#hero', '#house .sig-stage', '#gardens .gd-stage'].map(s => $(s)).filter(Boolean);
   const visit = $('#visit');
-  const guard = $$('.sh, .price-sig, .facts-grid, .extras, .house-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
-  const frames = $$('.frame').filter(f => !f.closest('#plan, #hero, .room-sheet'));
+  const guard = $$('.sh, .fl-toggle, .fl-infos, .fl-arrows, .price-sig, .facts-grid, .extras, .house-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
+  const frames = $$('.frame').filter(f => !f.closest('#floors, #hero, .room-sheet'));
   let pillHidden = true;
   function updatePill() {
     if (!pill) return;
@@ -286,48 +286,8 @@
     jumps['#gardens'] = () => tl.scrollTrigger.start + 2;
   }
 
-  /* ---------------- the plan: pinned; scroll steps through the floors, each one draws itself in ---------------- */
-  const plan = $('#plan');
-  if (plan) {
-    const tabs = $$('.pl-tab', plan), barFill = $('.pl-bar b', plan);
-    const parts = $$('.pl-floor', plan).map(f => ({ f, ink: $('.pl-ink', f), note: $('.pl-note', f), en: $('.pl-en', f), lis: $$('.pl-rooms li', f), fr: $('.pl-photo', f), inner: $('.pl-photo .frame-in', f), spots: $$('.spot', f) }));
-    const n = parts.length;
-    parts.forEach(p => { gsap.set(p.ink, { clipPath: 'inset(0% 100% 0% 0%)' }); gsap.set([p.note, p.en, ...p.lis].filter(Boolean), { opacity: 0 }); if (p.fr) { hideFrame(p.fr); gsap.set(p.fr, { opacity: 0 }); } });
-    parts[0].f.classList.remove('is-on');
-    let cur = -1, stl = null, entered = false;
-    const show = (i, dir) => {
-      if (i === cur) return;
-      if (stl) stl.progress(1);
-      const old = parts[cur], nu = parts[i];
-      cur = i;
-      tabs.forEach((t, k) => { t.classList.toggle('is-on', k === i); t.setAttribute('aria-current', k === i ? 'true' : 'false'); });
-      gsap.to(barFill, { scaleX: (i + 1) / n, duration: 0.6, ease: 'power2.inOut' });
-      stl = gsap.timeline();
-      const at = old ? 0.32 : 0;
-      if (old) stl.to(old.f, { y: -60 * dir, opacity: 0, duration: 0.42, ease: 'power2.in', onComplete: () => old.f.classList.remove('is-on') }, 0);
-      nu.f.classList.add('is-on');
-      stl.fromTo(nu.f, { y: old ? 70 * dir : 0, opacity: old ? 0 : 1 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, at)
-        .fromTo(nu.ink, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'power2.inOut' }, at + 0.1)
-        .fromTo([nu.note, nu.en].filter(Boolean), { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'power1.out' }, at + 0.6)
-        .fromTo(nu.lis, { opacity: 0, y: 10, '--s': 0 }, { opacity: 1, y: 0, '--s': 1, duration: 0.5, stagger: 0.08, ease: 'power2.out' }, at + 0.7);
-      if (nu.spots.length) stl.fromTo(nu.spots, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.45, stagger: 0.07, ease: 'back.out(2)' }, at + 0.85);
-      if (nu.fr) {
-        stl.fromTo(nu.fr, { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.55, ease: 'back.out(1.5)' }, at + 0.8);
-        drawFrame(stl, nu.fr, at + 0.9, 0.5, nu.fr.offsetWidth, nu.fr.offsetHeight);
-      }
-    };
-    const st = ScrollTrigger.create({
-      trigger: plan, start: 'top top', end: () => '+=' + Math.round(innerHeight * 0.85 * n), pin: true, anticipatePin: 1, invalidateOnRefresh: true,
-      onUpdate: s => { if (entered) { const i = Math.min(n - 1, Math.floor(s.progress * n * 0.999)); show(i, i > cur ? 1 : -1); } }
-    });
-    ScrollTrigger.create({ trigger: plan, start: 'top 60%', once: true, onEnter: () => { entered = true; revealHead($('.sh', plan)); show(Math.min(n - 1, Math.floor(st.progress * n * 0.999)), 1); } });
-    const floorY = j => st.start + (st.end - st.start) * ((j + 0.5) / n);
-    tabs.forEach((t, j) => t.addEventListener('click', () => { if (lenis) lenis.scrollTo(floorY(j), { duration: 1.2 }); else scrollTo({ top: floorY(j), behavior: 'smooth' }); }));
-    jumps['#plan'] = () => st.start + 2;
-  }
-
   /* ---------------- generic reveals (created after the pins so their positions include the pin spacing) ---------------- */
-  $$('.sh').filter(sh => !sh.closest('#hero, .sig, #plan, .gd-stage')).forEach(sh => {
+  $$('.sh').filter(sh => !sh.closest('#hero, .sig, .gd-stage')).forEach(sh => {
     ScrollTrigger.create({ trigger: sh, start: 'top 86%', once: true, onEnter: () => revealHead(sh) });
   });
   const fadeIn = (el, delay = 0) => gsap.fromTo(el, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
@@ -517,13 +477,100 @@
     return { open: show, isOpen: () => open };
   }
 
-  function initPlanTaps() {
-    $$('.pl-zoom').forEach(b => b.addEventListener('click', () => {
-      if (!LB) return;
+  /* ---- the floors: tap the ruler (or ↑ ↓, or arrow keys on it) to move between floors; photo | plan toggle.
+     Down a floor: everything moves up, a floor slab with the arriving elevation passes between the photos (mirror going up).
+     No swipe on the photo, no pinning: the page always scrolls. Reduced motion: a 0.3s crossfade, no slab. ---- */
+  function initFloors() {
+    const sec = $('#floors');
+    if (!sec) return;
+    const fr = $('.fl-frame', sec), fin = $('.frame-in', fr), slabs = $$('.fl-slab', fr);
+    const photos = $$('.fl-ph', sec), plans = $$('.fl-pl', sec), ticks = $$('.fl-tick', sec), marker = $('.fl-marker', sec);
+    const arrows = $$('.fl-arrow', sec), ruler = $('.fl-ruler', sec), infos = $$('.fl-info', sec), tgs = $$('.fl-tg', sec);
+    const note = $('.fl-note', sec), tip = $('.fl-tip', sec), layPhoto = $('.fl-photos', sec), layPlan = $('.fl-plans', sec);
+    const n = ticks.length, els = ticks.map(t => t.dataset.el);
+    const anim = !!window.gsap && !reduce;
+    let cur = Math.max(0, ticks.findIndex(t => t.classList.contains('is-on'))), view = 'photo', busy = null;
+    const items = () => (view === 'plan' ? plans : photos);
+    const setUi = (i, dur) => {
+      ticks.forEach((t, k) => { t.classList.toggle('is-on', k === i); if (k === i) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
+      marker.style.transitionDuration = dur + 's';
+      marker.style.top = ((i + 0.5) / n * 100).toFixed(2) + '%';
+      arrows[0].disabled = i === 0; arrows[1].disabled = i === n - 1;
+      infos.forEach((x, k) => { x.classList.toggle('is-on', k === i); x.setAttribute('aria-hidden', k === i ? 'false' : 'true'); });
+    };
+    // leave only floor i showing, in both views, with no transforms
+    const settle = i => {
+      [photos, plans].forEach(list => list.forEach((el, k) => { el.classList.toggle('is-on', k === i); el.style.visibility = ''; el.style.transform = ''; }));
+      slabs.forEach(s => { s.style.visibility = ''; s.style.transform = ''; });
+      plans.forEach((p, k) => $$('.spot', p).forEach(b => { b.tabIndex = view === 'plan' && k === i ? 0 : -1; }));
+    };
+    const go = i => {
+      i = clamp(i, 0, n - 1);
+      if (busy) busy.progress(1);
+      if (i === cur) return;
+      const from = cur, dir = i > from ? 1 : -1, steps = Math.abs(i - from), dur = steps > 1 ? 1.3 : 0.9;
+      cur = i; setUi(i, anim ? dur : 0.3);
+      if (!anim) { settle(i); const el = items()[i]; if (el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease' }); return; }
+      // the strip: from, slab, (middle floor, slab), to; stacked below when going down, above when going up
+      const list = items(), H = fin.clientHeight, S = H * 0.18, strip = [list[from]];
+      for (let k = 1; k <= steps; k++) { const s = slabs[k - 1]; $('.fl-slab-el', s).textContent = els[from + k * dir]; strip.push(s, list[from + k * dir]); }
+      const h = el => (el.classList.contains('fl-slab') ? S : H);
+      let acc = 0;
+      const ys = strip.map((el, k) => { if (!k) return 0; if (dir > 0) { acc += h(strip[k - 1]); return acc; } acc += h(el); return -acc; });
+      const shift = -ys[ys.length - 1];
+      strip.forEach((el, k) => { el.style.visibility = 'visible'; gsap.set(el, { y: ys[k] }); });
+      busy = gsap.to(strip, { y: k => ys[k] + shift, duration: dur, ease: 'power3.inOut', onComplete: () => { busy = null; settle(cur); } });
+    };
+    ticks.forEach((t, k) => t.addEventListener('click', () => go(k)));
+    arrows.forEach(a => a.addEventListener('click', () => go(cur + +a.dataset.dir)));
+    ruler.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      go(cur + (e.key === 'ArrowUp' ? -1 : 1));
+      ticks[cur].focus({ preventScroll: true });
+    });
+    // photo | plan
+    const setView = v => {
+      if (v === view) return;
+      if (busy) busy.progress(1);
+      view = v;
+      sec.classList.toggle('is-plan', v === 'plan');
+      tgs.forEach(b => { const on = b.dataset.view === v; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      layPlan.setAttribute('aria-hidden', v === 'plan' ? 'false' : 'true');
+      layPhoto.setAttribute('aria-hidden', v === 'plan' ? 'true' : 'false');
+      if (note) note.hidden = v !== 'plan';
+      tip.classList.remove('is-on');
+      settle(cur);
+    };
+    tgs.forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+    // the plan itself (outside the hotspots) opens full screen, zoomable
+    plans.forEach(p => p.addEventListener('click', e => {
+      if (e.target.closest('.spot') || !LB) return;
       if (SHEET) SHEET.close(true);
-      const f = b.closest('.pl-floor'), name = f ? f.getAttribute('aria-label') : '';
-      LB.open([{ src: b.dataset.src, alt: `תוכנית ${name}`, w: +b.dataset.w, h: +b.dataset.h }], 0, b, { zoom: true });
+      LB.open([{ src: p.dataset.src, alt: `תוכנית ${p.dataset.name}`, w: +p.dataset.w, h: +p.dataset.h }], 0, p, { zoom: true });
     }));
+    setUi(cur, 0); settle(cur);
+    // once: the plan half pulses with a hint, and the slab peeks up from the bottom to show there is a floor below
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(es => {
+        if (!es[0].isIntersecting) return;
+        io.disconnect();
+        if (view === 'photo') {
+          const pb = tgs.find(b => b.dataset.view === 'plan');
+          if (!reduce) { pb.classList.add('pulse'); pb.addEventListener('animationend', () => pb.classList.remove('pulse'), { once: true }); }
+          tip.classList.add('is-on'); setTimeout(() => tip.classList.remove('is-on'), 3000);
+        }
+        if (anim && cur < n - 1 && !busy) {
+          const s = slabs[0], H = fin.clientHeight;
+          $('.fl-slab-el', s).textContent = els[cur + 1];
+          gsap.timeline({ onComplete: () => { if (!busy) { s.style.visibility = ''; s.style.transform = ''; } } })
+            .set(s, { visibility: 'visible', y: H })
+            .to(s, { y: H * 0.88, duration: 0.3, ease: 'power2.out' }, 0.2)
+            .to(s, { y: H, duration: 0.3, ease: 'power2.in' }, 0.8);
+        }
+      }, { threshold: 0.5 });
+      io.observe(fr);
+    }
   }
 
   function initGallery() {
