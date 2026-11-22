@@ -554,3 +554,53 @@ html.js:not(.rm) .pc { opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
   .ba-viz, .ba-style, .ba-handle { transition: none; }
 }
+
+/* ---------- the walk: the hero's head, then one framed viewport scrubbed through the house ---------- */
+.walk { height: 100svh; min-height: 620px; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+.walk .hero-head { position: relative; z-index: 1; }
+.walk-box { display: flex; flex-direction: column; align-items: center; margin-top: 24px; }
+.walk-frame { width: min(calc(100vw - 48px), calc((100svh - 330px) * .8)); aspect-ratio: 4 / 5; }
+.walk-frame .frame-in { isolation: isolate; perspective: 1100px; }
+.walk-ph { position: absolute; inset: 0; opacity: 0; will-change: transform, opacity; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+.walk-ph[data-i="0"] { opacity: 1; }
+.walk-ph picture, .walk-ph img { display: block; width: 100%; height: 100%; }
+.walk-ph img { object-fit: cover; }
+.walk-under { width: min(calc(100vw - 48px), calc((100svh - 330px) * .8)); margin-top: 20px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.walk-cap { font: 300 15px/1.45 var(--he); min-height: 2.9em; }
+.walk-cap bdi { font-size: 1.1em; }
+.walk-count { flex: none; display: flex; align-items: baseline; gap: 2px; }
+.walk-now { font: 300 24px/1 var(--latin); font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }
+.walk-of { font: 300 14px/1 var(--latin); color: var(--fg2); letter-spacing: .06em; font-variant-numeric: lining-nums tabular-nums; }
+.walk-anchor { position: absolute; top: 0; width: 1px; height: 1px; }
+@media (min-width: 900px) {
+  .walk { display: flex; padding-top: calc(80px + env(safe-area-inset-top)); }
+  .walk .hero-head { align-self: stretch; }
+  .walk-frame, .walk-under { width: min(calc(100vw - 2 * var(--gut) - 20px), calc((100svh - 330px) * 1.6), 1200px); }
+  .walk-frame { aspect-ratio: 16 / 10; }
+}
+
+/* the front door: two walnut panels close over the frame, then swing open on their outer hinges */
+.walk-door { position: absolute; inset: 0; z-index: 2; pointer-events: none; perspective: 900px; }
+.wd { position: absolute; top: 0; bottom: 0; width: 50.2%; background-color: #4A3426; -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, .2), rgba(0, 0, 0, 0) 22%, rgba(255, 225, 190, .04) 55%, rgba(0, 0, 0, .18)),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, .07) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(90deg, rgba(255, 222, 186, .035) 0 2px, transparent 2px 23px),
+    repeating-linear-gradient(90deg, transparent 0 37px, rgba(0, 0, 0, .05) 37px 40px, transparent 40px 61px); }
+.wd-l { left: 0; transform-origin: left center; transform: translateX(-101%); box-shadow: inset -1px 0 0 rgba(201, 138, 94, .35); }
+.wd-r { right: 0; transform-origin: right center; transform: translateX(101%); }
+.wd-handle { position: absolute; right: 12%; top: 50%; width: 4px; height: 28%; margin-top: -14%; border-radius: 2px; background: linear-gradient(90deg, #7A4326, #E0A57A 45%, #7A4326); box-shadow: 1px 0 4px rgba(0, 0, 0, .35); }
+.wd-num { position: absolute; top: 18%; left: 0; right: 0; text-align: center; font: 300 clamp(64px, 22vw, 160px)/1 var(--latin); color: #C27B4E; font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; direction: ltr; opacity: 0; }
+
+/* mini-map: the ground floor in copper; the dot follows the walk */
+.walk-map { position: absolute; z-index: 3; top: 10px; left: 10px; width: 92px; height: 64px; background: rgba(242, 237, 230, .85); display: block; }
+.walk-map-in { position: absolute; top: 7px; bottom: 7px; left: 50%; aspect-ratio: var(--ar, 1.4); transform: translateX(-50%); }
+.walk-map-ink { position: absolute; inset: 0; background: var(--accent); opacity: .85; -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+.walk-dot { position: absolute; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: var(--accent); }
+.walk-dot::after { content: ""; position: absolute; inset: -1px; border-radius: 50%; border: 1px solid var(--accent); animation: spot-pulse 2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .walk-dot::after { animation: none; } }
+html.rm .walk, html:not(.js) .walk { height: auto; min-height: 0; padding-bottom: 6vh; }
+
+/* the price: the signature line under the number */
+.price-sig { margin-top: 22px; font: 300 20px/1.45 var(--he); }
+.price-sig + .price-sub { margin-top: 10px; }

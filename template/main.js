@@ -25,6 +25,17 @@
     new Set(deferred.map(im => im.closest('section') || im.parentElement)).forEach(s => io.observe(s));
   } else deferred.forEach(loadImg);
 
+  /* ---------------- the walk's photos: only the first frame loads with the page, the rest right after it paints ---------------- */
+  const walkEl = $('#hero.walk');
+  if (walkEl) {
+    const first = $('.walk-ph img', walkEl);
+    const loadWalk = () => setTimeout(() => {
+      $$('source[data-wsrcset]', walkEl).forEach(el => { el.srcset = el.dataset.wsrcset; delete el.dataset.wsrcset; });
+      $$('img[data-wsrc]', walkEl).forEach(im => { im.src = im.dataset.wsrc; delete im.dataset.wsrc; });
+    }, 60);
+    if (!first || first.complete) loadWalk(); else { first.addEventListener('load', loadWalk, { once: true }); first.addEventListener('error', loadWalk, { once: true }); }
+  }
+
   /* ---------------- English words never cut off: scale to fit the width ---------------- */
   function fitAll() {
     $$('.fit').forEach(el => {
@@ -136,8 +147,9 @@
   ScrollTrigger.config({ ignoreMobileResize: true });
   gsap.defaults({ ease: 'power3.out' });
 
-  if (window.Lenis) {
-    lenis = new Lenis({ duration: 1.1, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), touchMultiplier: 1.2 });
+  // smooth wheel scrolling on desktop only; phones and tablets keep their native scroll
+  if (window.Lenis && !matchMedia('(hover: none), (pointer: coarse)').matches) {
+    lenis = new Lenis({ lerp: 0.12, wheelMultiplier: 1 });
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add(t => lenis.raf(t * 1000));
     gsap.ticker.lagSmoothing(0);
@@ -180,7 +192,7 @@
       t.fromTo($('.topbar-line', bar), { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: 'power2.inOut' }, at);
       rise($('.hero-label', hero), 1); rise($('.hero-title', hero), 2); rise($('.hero-meta', hero), 3); rise($('.hero-price', hero), 4);
       t.fromTo($('.hero-rule', hero), { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: 'power2.inOut' }, at + 5 * S);
-      rise($$('.hero-bottom > *', hero), 6);
+      rise($$('.hero-bottom > *, .walk-under', hero), 6);
       rise($('.hero-chip', hero), 7);
     };
     const intro = $('div.intro');
@@ -221,8 +233,86 @@
       if (intro) intro.remove();
       heroIn(gsap.timeline(), 0.1);
     }
+    if (hero.classList.contains('walk')) initWalk();
     // slow push-in on the hero photo as it scrolls away
-    gsap.fromTo(himg, { scale: 1 }, { scale: 1.06, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
+    else gsap.fromTo(himg, { scale: 1 }, { scale: 1.06, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
+  }
+
+  /* ---------------- the walk: pinned ~5 screens; the head scrolls away, the frame stays centred and walks through the house.
+     Two motions only: step forward = zoom toward a focal point + crossfade; turn = whip pan (both photos move the same way). */
+  function initWalk() {
+    const head = $('.hero-head', hero), box = $('.walk-box', hero), fr = $('.walk-frame', hero);
+    const ph = $$('.walk-ph', hero), cap = $('.walk-cap', hero), now = $('.walk-now', hero), dot = $('.walk-dot', hero);
+    const data = JSON.parse($('#walk-data').textContent), P = data.path, n = ph.length;
+    const wl = $('.wd-l', hero), wr = $('.wd-r', hero), num = $('.wd-num', hero);
+    // data-origin is the focal point in photo coordinates; map it through object-fit: cover + object-position to the frame
+    const pct = v => (v || '50% 50%').split(' ').map(x => parseFloat(x) / 100);
+    const setOrigins = () => ph.forEach(p => {
+      const im = $('img', p), Fw = fr.clientWidth || 1, Fh = fr.clientHeight || 1, iw = +im.getAttribute('width'), ih = +im.getAttribute('height');
+      const [fx, fy] = pct(p.dataset.origin), [px, py] = pct(im.style.objectPosition), s = Math.max(Fw / iw, Fh / ih), Wd = iw * s, Hd = ih * s;
+      const ox = clamp(((Fw - Wd) * px + fx * Wd) / Fw, 0, 1), oy = clamp(((Fh - Hd) * py + fy * Hd) / Fh, 0, 1);
+      gsap.set(p, { transformOrigin: `${(ox * 100).toFixed(1)}% ${(oy * 100).toFixed(1)}%` });
+    });
+    setOrigins();
+    ScrollTrigger.addEventListener('refreshInit', setOrigins);
+    ph.forEach(p => gsap.set(p, { opacity: p.dataset.i === '0' ? 1 : 0 }));
+    gsap.set(wl, { x: 0, xPercent: -101 }); gsap.set(wr, { x: 0, xPercent: 101 });
+    const tl = gsap.timeline({ defaults: { ease: 'none' } });
+    // the head scrolls away, the frame moves to the centre of the screen
+    const centre = () => innerHeight / 2 - (box.offsetTop + fr.offsetTop + fr.offsetHeight / 2);
+    tl.to(head, { y: () => -(head.offsetTop + head.offsetHeight + 20), opacity: 0, duration: 0.3 }, 0)
+      .to(box, { y: centre, duration: 0.3 }, 0);
+    const zoom = (p, at, dur, to = 1.6) => tl.fromTo(p, { scale: 1 }, { scale: to, duration: dur, ease: 'power1.in', immediateRender: false }, at);
+    const forward = (a, b, at, len) => {   // the next photo is already at 1.12 on top and settles to 1; the previous fades (~15% of the step)
+      tl.fromTo(b, { opacity: 0, scale: 1.12 }, { opacity: 1, duration: len * 0.15, immediateRender: false }, at)
+        .to(b, { scale: 1, duration: len * 0.3, ease: 'power2.out' }, at)
+        .to(a, { opacity: 0, duration: len * 0.15 }, at + len * 0.02)
+        .to(a, { scale: 1.75, duration: len * 0.15 }, at);
+    };
+    const turn = (a, b, at, len, dir) => {   // whip pan: turning left the scene slides right, and vice versa
+      const s = dir === 'left' ? 1 : -1, d = len * 0.25;
+      tl.to(a, { xPercent: 35 * s, rotationY: -3 * s, opacity: 0, duration: d, ease: 'power2.in' }, at)
+        .fromTo(b, { xPercent: -35 * s, rotationY: 3 * s, opacity: 0 }, { xPercent: 0, rotationY: 0, opacity: 1, duration: d, ease: 'power3.out', immediateRender: false }, at);
+    };
+    const go = (i, at, dur) => { if (dot && P[i]) tl.to(dot, { left: P[i][0] + '%', top: P[i][1] + '%', duration: dur, ease: 'power1.inOut' }, at); };
+    // 1 · the street: zoom toward the entrance
+    zoom(ph[0], 0.05, 0.85);
+    go(1, 0.55, 0.45);
+    // 2 · the door closes over the frame, the inside is set behind it, the door swings open on its hinges
+    tl.fromTo(wl, { xPercent: -101 }, { xPercent: 0, duration: 0.28, ease: 'power2.inOut', immediateRender: false }, 0.85)
+      .fromTo(wr, { xPercent: 101 }, { xPercent: 0, duration: 0.28, ease: 'power2.inOut', immediateRender: false }, 0.85)
+      .to(num, { opacity: 1, duration: 0.12 }, 1.02)
+      .set(ph[0], { opacity: 0 }, 1.2).set(ph[1], { opacity: 1, scale: 1.12 }, 1.2)
+      .to(num, { opacity: 0, duration: 0.1 }, 1.3)
+      .to(wl, { rotationY: 100, duration: 0.5, ease: 'power2.in' }, 1.35)
+      .to(wr, { rotationY: -100, duration: 0.5, ease: 'power2.in' }, 1.35)
+      .to([wl, wr], { opacity: 0, duration: 0.12 }, 1.75)
+      .to(ph[1], { scale: 1, duration: 0.6, ease: 'power2.out' }, 1.35);
+    // 3 · turn left into the living room, then walk toward the left glass door
+    turn(ph[1], ph[2], 2.0, 1, ph[2].dataset.dir || 'left');
+    go(2, 1.95, 0.4);
+    zoom(ph[2], 2.3, 0.7);
+    // 4 · out to the garden: forward onto the deck, slow push-in
+    forward(ph[2], ph[3], 3.0, 0.75);
+    go(3, 3.0, 0.35);
+    tl.to(ph[3], { scale: 1.1, duration: 0.5 }, 3.25);
+    // 5 · turn around: the house from the garden, held for the last 20%
+    turn(ph[3], ph[4], 3.75, 1, ph[4].dataset.dir || 'right');
+    go(4, 3.75, 0.25);
+    tl.to({}, { duration: 1 }, 4);
+    const marks = [0, 0.9, 1.95, 2.95, 3.75];
+    let cur = 0;
+    const setStep = i => {
+      if (i === cur) return; cur = i;
+      now.textContent = pad2(i + 1);
+      cap.innerHTML = data.captions[i] || '';
+      gsap.fromTo(cap, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', overwrite: true });
+    };
+    const st = ScrollTrigger.create({
+      trigger: hero, start: 'top top', end: () => '+=' + Math.round(innerHeight * 5), pin: true, scrub: 0.4, anticipatePin: 1, invalidateOnRefresh: true, animation: tl
+    });
+    tl.eventCallback('onUpdate', () => { const t = tl.time(); let i = 0; for (let k = 0; k < n; k++) if (t >= marks[k]) i = k; setStep(i); });
+    jumps['#gardens'] = () => st.start + (st.end - st.start) * (3.25 / 5);
   }
 
   /* ---------------- the signature: pinned, the landscape photo pans across, the headline rises ---------------- */
@@ -246,7 +336,7 @@
   }
 
   /* ---------------- the gardens: the framed living room, zoom into its glass door, the deck takes the screen ---------------- */
-  const gardens = $('#gardens');
+  const gardens = $('section#gardens');
   if (gardens) {
     const stage = $('.gd-stage', gardens), sh = $('.gd-head .sh', gardens), zoom = $('.gd-zoom', gardens), fr = $('.gd-frame', gardens);
     const lines = $('.fr-lines', fr), full = $('.gd-full', gardens), fimg = $('.gd-img', gardens);

@@ -34,17 +34,18 @@ const use = (n, crop, key = String(n)) => {
 };
 const floors = (d.floors || []);
 const K = {
-  hero: use(P.hero), sig: use(P.signature), location: use(P.location),
+  walk: ((d.walk || {}).steps || []).map(s => use(s.photo)),
+  hero: d.walk ? null : use(P.hero), sig: d.walk ? null : use(P.signature), location: use(P.location),
   story: (d.story || []).map(s => use(s.photo)),
   floors: floors.map(f => use(f.photo)),
   spots: floors.map(f => (f.spots || []).map(p => use(p.photo))),
-  gdFrom: d.gardens ? use(d.gardens.from) : null, gdTo: d.gardens ? use(d.gardens.to) : null,
-  garden: ((d.gardens || {}).photos || []).map(g => use(g.photo)),
+  gdFrom: d.gardens && !d.walk ? use(d.gardens.from) : null, gdTo: d.gardens && !d.walk ? use(d.gardens.to) : null,
+  garden: (d.walk ? [] : (d.gardens || {}).photos || []).map(g => use(g.photo)),
   gallery: (d.gallery || []).map(g => use(g.photo)),
 };
 const fullscreen = new Set((P.fullscreen || [P.hero, P.signature]).map(String));
 
-const PHOTO_DIR = path.join(LDIR, 'photos');
+const PHOTO_DIR = path.join(LDIR, P.dir || 'photos');   // photos.dir: e.g. the agent's clean (no-logo) set
 const photoFiles = fs.readdirSync(PHOTO_DIR).filter(f => /\.(jpe?g|png|webp|tiff?)$/i.test(f));
 const srcFile = n => {
   let f = typeof n === 'string' && photoFiles.includes(n) ? n
@@ -248,7 +249,7 @@ const priceRings = () => `<svg class="price-rings" viewBox="-500 -500 1000 1000"
 
 /* ------------------------------------------------------------------ html helpers */
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const nums = s => esc(s).replace(/(\d[\d.,]*)/g, '<bdi>$1</bdi>');
+const nums = s => esc(s).replace(/(\d(?:[\d.,]*\d)?)/g, '<bdi>$1</bdi>');   // never swallow a trailing period
 const altOf = k => ((P.alt || {})[IMG[k].n]) || d.title;
 const alt = k => esc(altOf(k));
 const focus = k => ((P.focus || {})[k]) || '50% 50%';
@@ -310,7 +311,35 @@ function sections() {
   } else S.intro = '';
 
   /* hero */
-  S.hero = `
+  const W = d.walk;
+  if (W && K.walk.length) {
+    // the walk: the hero's head, then one framed viewport scrubbed through the house (zoom forward / whip-pan turns)
+    const gf = floors.findIndex(f => f.id === (W.mapFloor || 'ground')), gp = PLAN[gf];
+    const pic = (k, i) => { const im = IMG[k], a = i > 0 ? 'data-w' : '';
+      return `<picture>${im.src[2000] ? `<source media="(min-width: 901px)" ${a}srcset="${im.src[2000]}">` : ''}<img ${a}src="${im.src[1000]}" width="${im.w}" height="${im.h}" alt="${alt(k)}"${st[i].pos ? ` style="object-position:${esc(st[i].pos)}"` : ''}${i === 0 ? ' fetchpriority="high"' : ''} decoding="async"></picture>`; };
+    const st = W.steps; const path0 = (W.mapPath || [])[0] || [50, 0];
+    S.hero = `
+<section class="hero walk" id="hero" aria-label="${esc(d.title)}">
+  <div class="hero-head">
+    <p class="hero-label label-en" lang="en">${esc(d.latinTitle || `${d.type} · ${d.area}`)}</p>
+    <h1 class="hero-title">${nums(d.title)}</h1>
+    ${has(d.meta) ? `<p class="hero-meta">${d.meta.map(m => `<span class="nw">${nums(m)}</span>`).join(dot)}</p>` : ''}
+    ${d.price != null ? `<p class="hero-price"><span class="hero-price-num num" dir="ltr">${fmtPrice(d.price)}</span><span class="hero-price-label">${esc(H.priceLabel || 'מחיר מבוקש')}</span></p>` : ''}
+    <i class="hero-rule" aria-hidden="true"></i>
+  </div>
+  <div class="walk-box">
+    ${frame(`${st.map((s, i) => `<div class="walk-ph" data-i="${i}"${s.origin ? ` data-origin="${esc(s.origin)}"` : ''}${s.dir ? ` data-dir="${esc(s.dir)}"` : ''}>${pic(K.walk[i], i)}</div>`).join('')}
+      <div class="walk-door" aria-hidden="true"><i class="wd wd-l"><b class="wd-handle"></b></i><i class="wd wd-r"></i><p class="wd-num" lang="en">${esc(d.houseNumber || '')}</p></div>
+      ${gp ? `<a class="walk-map" href="#plan" aria-label="לתוכנית הקומה"><span class="walk-map-in" style="--ar:${(gp.w / gp.h).toFixed(4)}"><span class="walk-map-ink" style="-webkit-mask-image:url('${gp.src}');mask-image:url('${gp.src}')"></span><i class="walk-dot" style="left:${path0[0]}%;top:${path0[1]}%"></i></span></a>` : ''}`, { cls: 'hero-frame walk-frame', reveal: false })}
+    <div class="walk-under">
+      <p class="walk-cap" aria-live="polite">${nums(st[0].caption || '')}</p>
+      <p class="walk-count" dir="ltr" aria-hidden="true"><b class="walk-now">01</b><span class="walk-of"> / ${pad2(st.length)}</span></p>
+    </div>
+  </div>
+  <span class="walk-anchor" id="gardens" aria-hidden="true"></span>
+  <script type="application/json" id="walk-data">${JSON.stringify({ captions: st.map(s => nums(s.caption || '')), path: W.mapPath || [] })}</script>
+</section>`;
+  } else S.hero = `
 <section class="hero" id="hero" aria-label="${esc(d.title)}">
   <div class="hero-head">
     <p class="hero-label label-en" lang="en">${esc(d.latinTitle || `${d.type} · ${d.area}`)}</p>
@@ -330,7 +359,7 @@ function sections() {
 </section>`;
 
   /* signature (full-bleed, pinned) */
-  S.sig = K.sig ? `
+  S.sig = K.sig && !W ? `
 <section class="sig" id="house" aria-label="${esc(d.signature || d.title)}">
   <div class="sig-stage">
   <div class="sig-pan">${img(K.sig, { cls: 'sig-img', cover: false, sizes: coverSizes(K.sig) }).replace('<img ', `<img data-pan="${((P.pan || {})[P.signature] || []).join(',')}" `)}</div>
@@ -344,7 +373,7 @@ function sections() {
 
   /* the gardens: the living room continues outside (framed 28 → zoom into the door → 40 full-bleed) */
   const G = d.gardens;
-  S.gardens = G && K.gdFrom && K.gdTo ? `
+  S.gardens = G && !W && K.gdFrom && K.gdTo ? `
 <section class="gardens" id="gardens" aria-label="${esc(G.title)}">
   <div class="gd-stage">
     <div class="gd-head">${head(L.gardens, G.title)}</div>
@@ -434,6 +463,7 @@ function sections() {
   ${head(L.price, '', { cls: 'sh-c', titleHtml: `<p class="price-num" aria-label="${fmtPrice(d.price)}" dir="ltr">${[...fmtPrice(d.price)].map(ch => /\d/.test(ch)
       ? `<span class="pd" data-d="${ch}"><span class="pd-col">${Array.from({ length: 20 }, (_, k) => `<span>${k % 10}</span>`).join('')}</span></span>`
       : `<span class="pc${ch === '₪' ? ' cur' : ''}">${ch}</span>`).join('')}</p>` })}
+  ${d.priceSignature ? `<p class="price-sig" data-fade>${nums(d.priceSignature)}</p>` : ''}
   ${d.priceLine ? `<p class="price-sub" data-fade>${nums(d.priceLine)}</p>` : ''}
 </section>` : '';
 
@@ -527,7 +557,7 @@ function sections() {
 </footer>`;
 
   /* menu: one link per section that exists */
-  const target = { house: ['#house', S.sig], gardens: ['#gardens', S.gardens], story: ['#story', S.story], plan: ['#plan', S.plan], imagine: ['#imagine', S.imagine], price: ['#price', S.price],
+  const target = { house: ['#house', S.sig], gardens: ['#gardens', W ? S.hero : S.gardens], story: ['#story', S.story], plan: ['#plan', S.plan], imagine: ['#imagine', S.imagine], price: ['#price', S.price],
     gallery: ['#gallery', S.gallery], location: ['#location', S.location], visit: ['#visit', S.visit] };
   const order = d.menuOrder || Object.keys(target);
   const items = order.filter(k => target[k] && target[k][1] && L[k] && M[k]);
@@ -616,7 +646,8 @@ const vars = {
   url: esc(d.url || ''), og: esc((d.url || '') + 'og.jpg?v=' + ver),
   theme: THEME, themeColor: THEME === 'light' ? '#F2EDE6' : '#1E1915', intro: INTRO,
   robots: d.indexable ? '' : '<meta name="robots" content="noindex, nofollow">',
-  preload: `<link rel="preload" as="image" imagesrcset="${srcset(IMG[K.hero].src)}" imagesizes="(min-width: 900px) 60vw, calc(100vw - 48px)" fetchpriority="high">`,
+  preload: K.walk.length ? (w0 => `<link rel="preload" as="image" href="${w0.src[1000]}"${w0.src[2000] ? ' media="(max-width: 900px)"' : ''} fetchpriority="high">` + (w0.src[2000] ? `\n<link rel="preload" as="image" href="${w0.src[2000]}" media="(min-width: 901px)" fetchpriority="high">` : ''))(IMG[K.walk[0]])
+    : `<link rel="preload" as="image" imagesrcset="${srcset(IMG[K.hero].src)}" imagesizes="(min-width: 900px) 60vw, calc(100vw - 48px)" fetchpriority="high">`,
   brand: esc(d.title),
   cta: waAgent ? `<a class="pill is-hidden"${gc('wa-' + agentSlug(waAgent))} href="${esc(waLink(baseMsg()))}" target="_blank" rel="noopener">${WA_ICON}<span>לתיאום ביקור</span></a>` : '',
   v: ver,
