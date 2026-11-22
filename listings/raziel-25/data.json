@@ -75,7 +75,7 @@
       "label": "ENTRANCE FLOOR",
       "elevation": "±0.00",
       "ceiling": "2.73",
-      "photo": 30,
+      "photo": 20,
       "rooms": "סלון · מטבח שף · פינת אוכל · יציאה לגינות",
       "plan": "כניסה",
       "spots": [
@@ -107,7 +107,8 @@
           "y": 82,
           "id": "stairs"
         }
-      ]
+      ],
+      "focus": "68% 50%"
     },
     {
       "id": "basement",
@@ -134,7 +135,8 @@
           "y": 72,
           "id": "lower-room-2"
         }
-      ]
+      ],
+      "focus": "30% 50%"
     }
   ],
   "facts": [
