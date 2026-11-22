@@ -407,7 +407,7 @@ function sections() {
   ${sg.note ? `<p class="ba-note" data-fade>${esc(sg.note)}</p>` : ''}
 </section>` : '';
 
-  /* the floors: one framed view per floor (photo | plan), a floor ruler beside it; floors change only by tapping */
+  /* the floors: one framed view per floor (photo | plan), a row of floor buttons above it; floors change only by tapping */
   const fl = floors.map((f, i) => ({ ...f, i, plan: PLAN[i], k: K.floors[i] })).filter(f => f.plan && f.k);
   const f0 = Math.max(0, fl.findIndex(f => f.id === d.floorsDefault));
   const flNum = f => esc(String(f.num).replace('-', '−'));
@@ -418,7 +418,11 @@ function sections() {
   ${head(L.floors, d.floorsTitle)}
   <div class="fl-stage" style="--n:${fl.length}">
     <div class="fl-main">
-      ${frame(`<div class="fl-layer fl-photos">${fl.map((f, j) => `<div class="fl-item fl-ph${j === f0 ? ' is-on' : ''}" data-f="${j}">${img(f.k, { defer: true, sizes: '(min-width: 900px) 560px, calc(100vw - 72px)' })}</div>`).join('')}</div>
+      <p class="fl-pick" aria-hidden="true">בחרו קומה ↓</p>
+      <div class="fl-btns" role="group" aria-label="בחירת קומה">
+        ${fl.map((f, j) => `<button class="fl-btn${j === f0 ? ' is-on' : ''}" type="button" data-f="${j}" data-el="${esc(f.elevation || '')}"${j === f0 ? ' aria-current="true"' : ''}${gc('floor-' + f.id)}><span class="num" dir="ltr">${flNum(f)}</span><span>${esc(f.he)}</span></button>`).join('')}
+      </div>
+      ${frame(`<div class="fl-layer fl-photos">${fl.map((f, j) => `<div class="fl-item fl-ph${j === f0 ? ' is-on' : ''}" data-f="${j}">${img(f.k, { defer: true, sizes: '(min-width: 900px) 880px, calc(100vw - 68px)' })}</div>`).join('')}</div>
         <div class="fl-layer fl-plans" aria-hidden="true">${fl.map((f, j) => `<div class="fl-item fl-pl${j === f0 ? ' is-on' : ''}" data-f="${j}" data-src="${f.plan.src}" data-w="${f.plan.w}" data-h="${f.plan.h}" data-name="${esc(f.he)}">
           <div class="pl-draw" style="--ar:${(f.plan.w / f.plan.h).toFixed(4)}"><span class="pl-ink" data-mask="${f.plan.src}"></span>
           ${(f.spots || []).map((p, k) => { const sk = K.spots[f.i][k], im = IMG[sk]; return `<button class="spot${p.x > 66 ? ' spot-l' : ''}" type="button"${gc('plan-' + (p.id || p.label))} style="left:${p.x}%;top:${p.y}%" data-label="${esc(p.label)}" data-floor="${esc(f.label)}" data-src="${im.src[1000]}" data-srcset="${srcset(im.src)}" data-alt="${alt(sk)}" data-w="${im.w}" data-h="${im.h}" aria-haspopup="dialog" aria-label="לצפייה: ${esc(p.label)}" tabindex="-1"><i class="spot-dot" aria-hidden="true"></i><span class="spot-label">${esc(p.label)}</span></button>`; }).join('')}
@@ -438,12 +442,6 @@ function sections() {
           ${f.rooms ? `<p class="fl-rooms">${nums(Array.isArray(f.rooms) ? f.rooms.join(' · ') : f.rooms)}</p>` : ''}
         </div>`).join('\n        ')}
       </div>
-    </div>
-    <div class="fl-ruler">
-      <div class="fl-scale" role="group" aria-label="בחירת קומה" tabindex="-1"><i class="fl-line" aria-hidden="true"></i><i class="fl-marker" aria-hidden="true" style="top:${((f0 + 0.5) / fl.length * 100).toFixed(2)}%"></i>
-        ${fl.map((f, j) => `<button class="fl-tick${j === f0 ? ' is-on' : ''}" type="button" data-f="${j}" data-el="${esc(f.elevation || '')}" style="top:${((j + 0.5) / fl.length * 100).toFixed(2)}%" aria-label="${esc(f.he)}"${j === f0 ? ' aria-current="true"' : ''}${gc('floor-' + f.id)}><span class="num" dir="ltr">${flNum(f)}</span></button>`).join('')}
-      </div>
-      <div class="fl-arrows"><button class="fl-arrow" type="button" data-dir="-1" aria-label="קומה למעלה">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>'}</button><button class="fl-arrow" type="button" data-dir="1" aria-label="קומה למטה">${'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'}</button></div>
     </div>
   </div>
 </section>

@@ -83,7 +83,7 @@
   const pill = $('.pill');
   const noPillZones = ['#hero', '#house .sig-stage', '#gardens .gd-stage'].map(s => $(s)).filter(Boolean);
   const visit = $('#visit');
-  const guard = $$('.sh, .fl-toggle, .fl-infos, .fl-arrows, .price-sig, .facts-grid, .extras, .house-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
+  const guard = $$('.sh, .fl-toggle, .fl-infos, .fl-btns, .price-sig, .facts-grid, .extras, .house-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
   const frames = $$('.frame').filter(f => !f.closest('#floors, #hero, .room-sheet'));
   let pillHidden = true;
   function updatePill() {
@@ -216,30 +216,10 @@
       if (intro) intro.remove();
       heroIn(gsap.timeline(), 0.1);
     }
-    if (FILM) initFilmOpen();
+    // the film: the framed photo settles 1.06 → 1 as the page loads; no scroll effect, no pinning in the hero
+    if (FILM) { if (!reduce) gsap.fromTo($$('.film-ph picture, .film-ph > img', hero), { scale: 1.06 }, { scale: 1, duration: 1.6, ease: 'power2.out', delay: 0.1 }); }
     // slow push-in on the hero photo as it scrolls away
     else gsap.fromTo(himg, { scale: 1 }, { scale: 1.06, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
-  }
-
-  /* ---------------- the opening transition: pinned ~1 screen; the frame opens to full-bleed on the photo that is playing,
-     then settles back into a framed card and the page continues. The film pauses meanwhile. ---------------- */
-  function initFilmOpen() {
-    const fr = FILM.frame, lines = $('.fr-lines', fr), head = $('.hero-head', hero), under = $('.film-under', hero), bar_ = $('.film-bar', hero), shade = $('.film-shade', hero);
-    const dx = () => innerWidth / 2 - (fr.offsetLeft + fr.offsetWidth / 2);
-    const dy = () => innerHeight / 2 - (fr.offsetTop + fr.offsetHeight / 2);
-    const full = () => Math.max(innerWidth / fr.offsetWidth, innerHeight / fr.offsetHeight) * 1.002;
-    const tl = gsap.timeline({ defaults: { ease: 'none' } });
-    tl.to(fr, { x: dx, y: dy, scale: full, duration: 0.42, ease: 'power2.inOut' }, 0)
-      .to([lines, bar_, shade], { opacity: 0, duration: 0.14 }, 0)
-      .to(head, { opacity: 0, y: -24, duration: 0.22 }, 0)
-      .to(under, { opacity: 0, duration: 0.16 }, 0)
-      .to(fr, { x: 0, scale: 1, duration: 0.42, ease: 'power2.inOut' }, 0.58)
-      .to([lines, bar_, shade], { opacity: 1, duration: 0.16 }, 0.84)
-      .fromTo(under, { y: 0 }, { y: dy, opacity: 1, duration: 0.2, immediateRender: false }, 0.8);
-    ScrollTrigger.create({
-      trigger: hero, start: 'top top', end: () => '+=' + Math.round(innerHeight), pin: true, scrub: 0.5, anticipatePin: 1, invalidateOnRefresh: true, animation: tl,
-      onUpdate: s => { const on = s.progress > 0.01 && s.progress < 0.99; root.classList.toggle('film-open', on); on ? FILM.pause('open') : FILM.resume('open'); }
-    });
   }
 
   /* ---------------- the signature: pinned, the landscape photo pans across, the headline rises ---------------- */
@@ -477,25 +457,24 @@
     return { open: show, isOpen: () => open };
   }
 
-  /* ---- the floors: tap the ruler (or ↑ ↓, or arrow keys on it) to move between floors; photo | plan toggle.
+  /* ---- the floors: a row of floor buttons above the frame; photo | plan toggle under it. Always starts on the entrance floor.
      Down a floor: everything moves up, a floor slab with the arriving elevation passes between the photos (mirror going up).
-     No swipe on the photo, no pinning: the page always scrolls. Reduced motion: a 0.3s crossfade, no slab. ---- */
+     Once, on arrival: the frame shows the floor above and moves down to the entrance floor, to show the mechanic.
+     No swipe on the photo, no pinning: the page always scrolls. Reduced motion: a 0.3s crossfade, no slab, no arrival move. ---- */
   function initFloors() {
     const sec = $('#floors');
     if (!sec) return;
     const fr = $('.fl-frame', sec), fin = $('.frame-in', fr), slabs = $$('.fl-slab', fr);
-    const photos = $$('.fl-ph', sec), plans = $$('.fl-pl', sec), ticks = $$('.fl-tick', sec), marker = $('.fl-marker', sec);
-    const arrows = $$('.fl-arrow', sec), ruler = $('.fl-ruler', sec), infos = $$('.fl-info', sec), tgs = $$('.fl-tg', sec);
+    const photos = $$('.fl-ph', sec), plans = $$('.fl-pl', sec), btns = $$('.fl-btn', sec);
+    const infos = $$('.fl-info', sec), tgs = $$('.fl-tg', sec);
     const note = $('.fl-note', sec), tip = $('.fl-tip', sec), layPhoto = $('.fl-photos', sec), layPlan = $('.fl-plans', sec);
-    const n = ticks.length, els = ticks.map(t => t.dataset.el);
+    const n = btns.length, els = btns.map(t => t.dataset.el);
     const anim = !!window.gsap && !reduce;
-    let cur = Math.max(0, ticks.findIndex(t => t.classList.contains('is-on'))), view = 'photo', busy = null;
+    const home = Math.max(0, btns.findIndex(t => t.classList.contains('is-on')));
+    let cur = home, view = 'photo', busy = null, touched = false;
     const items = () => (view === 'plan' ? plans : photos);
-    const setUi = (i, dur) => {
-      ticks.forEach((t, k) => { t.classList.toggle('is-on', k === i); if (k === i) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
-      marker.style.transitionDuration = dur + 's';
-      marker.style.top = ((i + 0.5) / n * 100).toFixed(2) + '%';
-      arrows[0].disabled = i === 0; arrows[1].disabled = i === n - 1;
+    const setUi = i => {
+      btns.forEach((t, k) => { t.classList.toggle('is-on', k === i); if (k === i) t.setAttribute('aria-current', 'true'); else t.removeAttribute('aria-current'); });
       infos.forEach((x, k) => { x.classList.toggle('is-on', k === i); x.setAttribute('aria-hidden', k === i ? 'false' : 'true'); });
     };
     // leave only floor i showing, in both views, with no transforms
@@ -509,7 +488,7 @@
       if (busy) busy.progress(1);
       if (i === cur) return;
       const from = cur, dir = i > from ? 1 : -1, steps = Math.abs(i - from), dur = steps > 1 ? 1.3 : 0.9;
-      cur = i; setUi(i, anim ? dur : 0.3);
+      cur = i; setUi(i);
       if (!anim) { settle(i); const el = items()[i]; if (el.animate) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease' }); return; }
       // the strip: from, slab, (middle floor, slab), to; stacked below when going down, above when going up
       const list = items(), H = fin.clientHeight, S = H * 0.18, strip = [list[from]];
@@ -521,14 +500,7 @@
       strip.forEach((el, k) => { el.style.visibility = 'visible'; gsap.set(el, { y: ys[k] }); });
       busy = gsap.to(strip, { y: k => ys[k] + shift, duration: dur, ease: 'power3.inOut', onComplete: () => { busy = null; settle(cur); } });
     };
-    ticks.forEach((t, k) => t.addEventListener('click', () => go(k)));
-    arrows.forEach(a => a.addEventListener('click', () => go(cur + +a.dataset.dir)));
-    ruler.addEventListener('keydown', e => {
-      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
-      e.preventDefault();
-      go(cur + (e.key === 'ArrowUp' ? -1 : 1));
-      ticks[cur].focus({ preventScroll: true });
-    });
+    btns.forEach((t, k) => t.addEventListener('click', () => { touched = true; go(k); }));
     // photo | plan
     const setView = v => {
       if (v === view) return;
@@ -549,27 +521,31 @@
       if (SHEET) SHEET.close(true);
       LB.open([{ src: p.dataset.src, alt: `תוכנית ${p.dataset.name}`, w: +p.dataset.w, h: +p.dataset.h }], 0, p, { zoom: true });
     }));
-    setUi(cur, 0); settle(cur);
-    // once: the plan half pulses with a hint, and the slab peeks up from the bottom to show there is a floor below
+    setUi(cur); settle(cur);
+    // the arrival, once: shortly before the frame comes into view it quietly switches to the floor above the entrance floor;
+    // when half of it is in view, the normal floor change runs down to the entrance floor. After that, only taps change floors.
+    // Then the plan half pulses with a hint.
     if ('IntersectionObserver' in window) {
+      let primed = false;
+      const prime = () => {
+        if (primed || touched || !anim || home === 0) return;
+        primed = true; cur = home - 1; setUi(cur); settle(cur);
+      };
+      const near = new IntersectionObserver(es => { if (es[0].isIntersecting) { near.disconnect(); prime(); } }, { rootMargin: '0px 0px 60% 0px' });
       const io = new IntersectionObserver(es => {
         if (!es[0].isIntersecting) return;
-        io.disconnect();
-        if (view === 'photo') {
+        io.disconnect(); near.disconnect();
+        prime();
+        const arrive = primed && !touched && cur !== home;
+        if (arrive) setTimeout(() => { if (!touched) go(home); }, 250);
+        if (view === 'photo') setTimeout(() => {
+          if (view !== 'photo') return;
           const pb = tgs.find(b => b.dataset.view === 'plan');
           if (!reduce) { pb.classList.add('pulse'); pb.addEventListener('animationend', () => pb.classList.remove('pulse'), { once: true }); }
           tip.classList.add('is-on'); setTimeout(() => tip.classList.remove('is-on'), 3000);
-        }
-        if (anim && cur < n - 1 && !busy) {
-          const s = slabs[0], H = fin.clientHeight;
-          $('.fl-slab-el', s).textContent = els[cur + 1];
-          gsap.timeline({ onComplete: () => { if (!busy) { s.style.visibility = ''; s.style.transform = ''; } } })
-            .set(s, { visibility: 'visible', y: H })
-            .to(s, { y: H * 0.88, duration: 0.3, ease: 'power2.out' }, 0.2)
-            .to(s, { y: H, duration: 0.3, ease: 'power2.in' }, 0.8);
-        }
+        }, arrive ? 1400 : 0);
       }, { threshold: 0.5 });
-      io.observe(fr);
+      near.observe(fr); io.observe(fr);
     }
   }
 
@@ -704,7 +680,7 @@
   }
 
   /* ---- the film: five photos play by themselves (Ken Burns + crossfade). Tap the right half = next, the left half = previous,
-     long-press = pause. Paused off screen, in a hidden tab and during the opening transition. Reduced motion: still photo, tap to advance. ---- */
+     long-press = pause. Paused off screen, and in a hidden tab. Reduced motion: still photo, tap to advance. ---- */
   function initFilm() {
     const el = $('#hero.film'), dataEl = $('#film-data');
     if (!el || !dataEl) return null;

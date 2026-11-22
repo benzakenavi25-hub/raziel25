@@ -34,7 +34,7 @@
       "label": "FIRST FLOOR",
       "elevation": "+3.12",
       "ceiling": "2.67",
-      "photo": 14,
+      "photo": 16,
       "rooms": "2 סוויטות · חדרי רחצה מעוצבים · חדר ארונות",
       "plan": "ראשונה",
       "spots": [
@@ -75,20 +75,20 @@
       "label": "ENTRANCE FLOOR",
       "elevation": "±0.00",
       "ceiling": "2.73",
-      "photo": 28,
+      "photo": 30,
       "rooms": "סלון · מטבח שף · פינת אוכל · יציאה לגינות",
       "plan": "כניסה",
       "spots": [
         {
           "label": "מטבח",
-          "photo": 23,
+          "photo": 22,
           "x": 24,
           "y": 38,
           "id": "kitchen"
         },
         {
           "label": "סלון",
-          "photo": 28,
+          "photo": 30,
           "x": 78,
           "y": 72,
           "id": "living"
@@ -116,7 +116,7 @@
       "label": "LOWER FLOOR",
       "elevation": "−3.13",
       "ceiling": "2.70",
-      "photo": 18,
+      "photo": 10,
       "rooms": "3 חדרים גדולים · משרד, חדר כושר, חדר אורחים",
       "plan": "מרתף",
       "spots": [
