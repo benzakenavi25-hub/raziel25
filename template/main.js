@@ -71,6 +71,8 @@
   function onScroll() {
     const y = scrollY, max = root.scrollHeight - innerHeight;
     prog.style.transform = `scaleX(${max > 0 ? Math.min(1, y / max) : 0})`;
+    // the page ends at the footer: no rubber-band past it (in-app browsers show white there); pull-to-refresh at the top stays
+    root.classList.toggle('at-end', max > 0 && y > max - innerHeight * 0.6);
     if (darkMotif && motif && !reduce) motif.style.transform = `translate3d(0, ${(-y * 0.1).toFixed(1)}px, 0)`;
     const heroBottom = hero ? hero.offsetTop + hero.offsetHeight : 0;
     bar.classList.toggle('is-solid', y > 40);
