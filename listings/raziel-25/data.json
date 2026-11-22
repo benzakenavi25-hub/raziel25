@@ -20,24 +20,6 @@
     "6 חד׳"
   ],
   "ogDescription": "₪6,490,000 · 205 מ״ר בנוי · מגרש 224 מ״ר · 2 גינות · 6 חדרים",
-  "priceLine": "בית פרטי חדש · 205 מ״ר · 2 גינות · 3 מפלסים",
-  "story": [
-    {
-      "word": "LIVING",
-      "line": "מהסלון אל המטבח והמדרגות.",
-      "photo": 20
-    },
-    {
-      "word": "KITCHEN",
-      "line": "מטבח שף, מנגר פרטי.",
-      "photo": 23
-    },
-    {
-      "word": "STAIRS",
-      "line": "שלושה מפלסים, בית אחד.",
-      "photo": 19
-    }
-  ],
   "planTitle": "הבית, קומה אחרי קומה.",
   "planNote": "תוכניות להמחשה בלבד",
   "planCrop": [
@@ -178,7 +160,7 @@
     {
       "value": "75",
       "unit": "מ״ר",
-      "label": "2 גינות עם דק"
+      "label": "2 גינות"
     },
     {
       "value": "6",
@@ -201,12 +183,10 @@
       "label": "חניות"
     }
   ],
-  "factsTitle": "הבית, במספרים.",
   "extras": [
     "ממ״ד",
     "מטבח שף מנגר פרטי",
-    "חשמל חכם",
-    "כניסה מיידית"
+    "חשמל חכם"
   ],
   "agents": [
     {
@@ -238,11 +218,6 @@
     ],
     "whatsappTo": 0
   },
-  "location": {
-    "title": "דוד רזיאל, הרצליה הצעירה.",
-    "line": "רחוב דוד רזיאל, הרצליה הצעירה. רחוב של בתים פרטיים בלבד.",
-    "mapsQuery": "דוד רזיאל 25 הרצליה"
-  },
   "staging": {
     "title": "לדמיין את הבית שלכם.",
     "room": "הסלון",
@@ -272,42 +247,35 @@
   },
   "labels": {
     "house": "THE HOUSE",
-    "story": "GROUND FLOOR",
     "imagine": "IMAGINE",
     "plan": "THE PLAN",
     "price": "THE PRICE",
-    "facts": "IN NUMBERS",
     "gallery": "GALLERY",
-    "location": "THE LOCATION",
-    "visit": "PRIVATE TOUR",
-    "gardens": "THE GARDENS"
+    "visit": "PRIVATE TOUR"
   },
   "menu": {
     "plan": "התוכנית",
     "imagine": "לדמיין",
     "price": "מחיר",
     "gallery": "גלריה",
-    "location": "מיקום",
-    "visit": "תיאום ביקור",
-    "gardens": "הגינות"
+    "house": "הבית",
+    "visit": "תיאום ביקור"
   },
   "menuOrder": [
-    "gardens",
     "plan",
     "imagine",
     "price",
     "gallery",
-    "location",
+    "house",
     "visit"
   ],
   "photos": {
-    "location": 44,
     "fullscreen": [
-      47,
-      31,
+      44,
       28,
-      40,
-      44
+      23,
+      19,
+      40
     ],
     "focus": {
       "14": "45% 55%",
@@ -449,67 +417,41 @@
   ],
   "planHint": "לחצו על חדר ותיכנסו אליו.",
   "priceSignature": "להיכנס עם מזוודות. כניסה מיידית.",
-  "walk": {
-    "label": "THE WALK",
-    "steps": [
+  "film": {
+    "slides": [
       {
-        "photo": 47,
-        "caption": "דוד רזיאל 25. רחוב של בתים פרטיים בלבד.",
-        "move": "zoom",
-        "origin": "20% 60%",
-        "pos": "20% 55%"
-      },
-      {
-        "door": true,
-        "photo": 31,
-        "caption": "נכנסים.",
-        "pos": "50% 50%"
+        "photo": 44,
+        "room": "הבית",
+        "caption": "בית חדש, 3 מפלסים"
       },
       {
         "photo": 28,
-        "caption": "פונים שמאלה. הסלון, והוויטרינות לגינה.",
-        "move": "turn",
-        "dir": "left",
-        "origin": "38% 52%",
-        "pos": "40% 50%"
+        "room": "הסלון",
+        "caption": "ויטרינות לגינה"
+      },
+      {
+        "photo": 23,
+        "room": "המטבח",
+        "caption": "מטבח שף מנגר פרטי"
+      },
+      {
+        "photo": 19,
+        "room": "המדרגות",
+        "caption": "3 מפלסים, בית אחד"
       },
       {
         "photo": 40,
-        "caption": "והחוצה, לגינה. דק עץ וצמחייה עשירה.",
-        "move": "zoom",
-        "origin": "50% 62%",
-        "pos": "50% 60%"
-      },
-      {
-        "photo": 44,
-        "caption": "מסתובבים. בית חדש, 3 מפלסים, 205 מ״ר.",
-        "move": "turn",
-        "dir": "right",
-        "pos": "50% 50%"
+        "room": "הגינה",
+        "caption": "2 גינות עם דק"
       }
     ],
-    "mapFloor": "ground",
-    "mapPath": [
-      [
-        53,
-        2
-      ],
-      [
-        53,
-        20
-      ],
-      [
-        76,
-        62
-      ],
-      [
-        104,
-        70
-      ],
-      [
-        104,
-        40
-      ]
-    ]
+    "seconds": 4,
+    "fade": 0.9
+  },
+  "house": {
+    "title": "דוד רזיאל 25, הרצליה הצעירה.",
+    "photo": 44,
+    "line": "רחוב של בתים פרטיים בלבד, בלב הרצליה הצעירה.",
+    "mapsQuery": "דוד רזיאל 25 הרצליה"
   }
 }

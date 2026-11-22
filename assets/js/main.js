@@ -1,4 +1,4 @@
-/* Listing template v5 · motion: door (or elevator) intro · hero cascade · signature pan · pinned story · before/after ·
+/* Listing template v5 · motion: door (or elevator) intro · hero cascade · signature pan · film hero + opening · before/after ·
    pinned floor plans · price odometer + grid · menu · coverflow · zoomable lightbox. */
 (() => {
   'use strict';
@@ -16,25 +16,18 @@
 
   /* ---------------- deferred photos: load a section's photos when it is ~1.5 screens away ---------------- */
   const loadImg = im => { if (!im.dataset.src) return; if (im.dataset.srcset) im.srcset = im.dataset.srcset; im.src = im.dataset.src; im.removeAttribute('data-src'); im.removeAttribute('data-srcset'); };
-  const deferred = $$('img[data-src]');
+  // the plan drawings are CSS masks: set them only when their section comes near, like the photos
+  const loadMask = el => { const u = `url("${el.dataset.mask}")`; el.style.webkitMaskImage = u; el.style.maskImage = u; el.removeAttribute('data-mask'); };
+  const deferred = $$('img[data-src], [data-mask]');
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(es => es.forEach(e => {
       if (!e.isIntersecting) return;
-      $$('img[data-src]', e.target).forEach(loadImg); io.unobserve(e.target);
+      $$('img[data-src]', e.target).forEach(loadImg); $$('[data-mask]', e.target).forEach(loadMask); io.unobserve(e.target);
     }), { rootMargin: '0px 0px 150% 0px' });
     new Set(deferred.map(im => im.closest('section') || im.parentElement)).forEach(s => io.observe(s));
-  } else deferred.forEach(loadImg);
+  } else { deferred.forEach(el => (el.dataset.mask ? loadMask(el) : loadImg(el))); }
 
-  /* ---------------- the walk's photos: only the first frame loads with the page, the rest right after it paints ---------------- */
-  const walkEl = $('#hero.walk');
-  if (walkEl) {
-    const first = $('.walk-ph img', walkEl);
-    const loadWalk = () => setTimeout(() => {
-      $$('source[data-wsrcset]', walkEl).forEach(el => { el.srcset = el.dataset.wsrcset; delete el.dataset.wsrcset; });
-      $$('img[data-wsrc]', walkEl).forEach(im => { im.src = im.dataset.wsrc; delete im.dataset.wsrc; });
-    }, 60);
-    if (!first || first.complete) loadWalk(); else { first.addEventListener('load', loadWalk, { once: true }); first.addEventListener('error', loadWalk, { once: true }); }
-  }
+  const FILM = initFilm();
 
   /* ---------------- English words never cut off: scale to fit the width ---------------- */
   function fitAll() {
@@ -70,8 +63,8 @@
   const SHEET = initRoomSheet();
   initVisit();
 
-  /* ---------------- top bar · progress · dark wash · pill (plain scroll listener: cheap) ---------------- */
-  const bar = $('.topbar'), prog = $('.progress i'), hero = $('#hero'), facts = $('#facts'), sig = $('#house .sig-stage'), motif = $('.motif');
+  /* ---------------- top bar · progress · pill (plain scroll listener: cheap) ---------------- */
+  const bar = $('.topbar'), prog = $('.progress i'), hero = $('#hero'), sig = $('#house .sig-stage'), motif = $('.motif');
   const darkMotif = root.dataset.theme !== 'light';
   let lastY = scrollY;
   const sizeMotif = () => { if (!darkMotif || !motif) return; motif.style.height = Math.ceil(innerHeight + Math.max(0, root.scrollHeight - innerHeight) * 0.1 + 2) + 'px'; };
@@ -82,26 +75,16 @@
     const heroBottom = hero ? hero.offsetTop + hero.offsetHeight : 0;
     bar.classList.toggle('is-solid', y > 40);
     if (Math.abs(y - lastY) > 6) { bar.classList.toggle('is-up', y > lastY && y > 120 && y > heroBottom - 60); lastY = y; }
-    let w = 0;
-    if (facts) {
-      // the dark section: crossfade in over its first ~30%, back out over its last ~25%
-      const r = facts.getBoundingClientRect(), h = innerHeight;
-      const inP = clamp01((h * 0.6 - r.top) / (h * 0.4));   // starts once the section's top passes 60% of the screen (the price above stays light)
-      const outP = clamp01((h * 0.55 - r.bottom) / (h * 0.45));
-      w = r.top > h ? 0 : smooth(inP) * (1 - smooth(outP));
-      root.style.setProperty('--wash', w.toFixed(3));
-    }
     if (sig) { const r = boxOf(sig).getBoundingClientRect(); bar.classList.toggle('on-photo', r.top <= 28 && r.bottom > 56); }
-    bar.classList.toggle('on-dark', w > 0.5);
     updatePill();
   }
 
   /* ---------------- floating pill: never in pinned sequences or the hero, gone from the visit section on ---------------- */
   const pill = $('.pill');
-  const noPillZones = ['#hero', '#house .sig-stage', '#gardens .gd-stage', '#story', '#plan'].map(s => $(s)).filter(Boolean);
+  const noPillZones = ['#hero', '#house .sig-stage', '#gardens .gd-stage', '#plan'].map(s => $(s)).filter(Boolean);
   const visit = $('#visit');
-  const guard = $$('.sh, .story-line, .price-sub, .extras, .loc-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
-  const frames = $$('.frame').filter(f => !f.closest('#story, #plan, #hero, .room-sheet'));
+  const guard = $$('.sh, .price-sig, .facts-grid, .extras, .house-line, .text-link, .ba-chips, .ba-note, .cf-meta, .cf-bar');
+  const frames = $$('.frame').filter(f => !f.closest('#plan, #hero, .room-sheet'));
   let pillHidden = true;
   function updatePill() {
     if (!pill) return;
@@ -192,7 +175,7 @@
       t.fromTo($('.topbar-line', bar), { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: 'power2.inOut' }, at);
       rise($('.hero-label', hero), 1); rise($('.hero-title', hero), 2); rise($('.hero-meta', hero), 3); rise($('.hero-price', hero), 4);
       t.fromTo($('.hero-rule', hero), { scaleX: 0 }, { scaleX: 1, duration: 0.55, ease: 'power2.inOut' }, at + 5 * S);
-      rise($$('.hero-bottom > *, .walk-under', hero), 6);
+      rise($$('.hero-bottom > *, .film-under', hero), 6);
       rise($('.hero-chip', hero), 7);
     };
     const intro = $('div.intro');
@@ -233,86 +216,30 @@
       if (intro) intro.remove();
       heroIn(gsap.timeline(), 0.1);
     }
-    if (hero.classList.contains('walk')) initWalk();
+    if (FILM) initFilmOpen();
     // slow push-in on the hero photo as it scrolls away
     else gsap.fromTo(himg, { scale: 1 }, { scale: 1.06, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
   }
 
-  /* ---------------- the walk: pinned ~5 screens; the head scrolls away, the frame stays centred and walks through the house.
-     Two motions only: step forward = zoom toward a focal point + crossfade; turn = whip pan (both photos move the same way). */
-  function initWalk() {
-    const head = $('.hero-head', hero), box = $('.walk-box', hero), fr = $('.walk-frame', hero);
-    const ph = $$('.walk-ph', hero), cap = $('.walk-cap', hero), now = $('.walk-now', hero), dot = $('.walk-dot', hero);
-    const data = JSON.parse($('#walk-data').textContent), P = data.path, n = ph.length;
-    const wl = $('.wd-l', hero), wr = $('.wd-r', hero), num = $('.wd-num', hero);
-    // data-origin is the focal point in photo coordinates; map it through object-fit: cover + object-position to the frame
-    const pct = v => (v || '50% 50%').split(' ').map(x => parseFloat(x) / 100);
-    const setOrigins = () => ph.forEach(p => {
-      const im = $('img', p), Fw = fr.clientWidth || 1, Fh = fr.clientHeight || 1, iw = +im.getAttribute('width'), ih = +im.getAttribute('height');
-      const [fx, fy] = pct(p.dataset.origin), [px, py] = pct(im.style.objectPosition), s = Math.max(Fw / iw, Fh / ih), Wd = iw * s, Hd = ih * s;
-      const ox = clamp(((Fw - Wd) * px + fx * Wd) / Fw, 0, 1), oy = clamp(((Fh - Hd) * py + fy * Hd) / Fh, 0, 1);
-      gsap.set(p, { transformOrigin: `${(ox * 100).toFixed(1)}% ${(oy * 100).toFixed(1)}%` });
-    });
-    setOrigins();
-    ScrollTrigger.addEventListener('refreshInit', setOrigins);
-    ph.forEach(p => gsap.set(p, { opacity: p.dataset.i === '0' ? 1 : 0 }));
-    gsap.set(wl, { x: 0, xPercent: -101 }); gsap.set(wr, { x: 0, xPercent: 101 });
+  /* ---------------- the opening transition: pinned ~1 screen; the frame opens to full-bleed on the photo that is playing,
+     then settles back into a framed card and the page continues. The film pauses meanwhile. ---------------- */
+  function initFilmOpen() {
+    const fr = FILM.frame, lines = $('.fr-lines', fr), head = $('.hero-head', hero), under = $('.film-under', hero), bar_ = $('.film-bar', hero), shade = $('.film-shade', hero);
+    const dx = () => innerWidth / 2 - (fr.offsetLeft + fr.offsetWidth / 2);
+    const dy = () => innerHeight / 2 - (fr.offsetTop + fr.offsetHeight / 2);
+    const full = () => Math.max(innerWidth / fr.offsetWidth, innerHeight / fr.offsetHeight) * 1.002;
     const tl = gsap.timeline({ defaults: { ease: 'none' } });
-    // the head scrolls away, the frame moves to the centre of the screen
-    const centre = () => innerHeight / 2 - (box.offsetTop + fr.offsetTop + fr.offsetHeight / 2);
-    tl.to(head, { y: () => -(head.offsetTop + head.offsetHeight + 20), opacity: 0, duration: 0.3 }, 0)
-      .to(box, { y: centre, duration: 0.3 }, 0);
-    const zoom = (p, at, dur, to = 1.6) => tl.fromTo(p, { scale: 1 }, { scale: to, duration: dur, ease: 'power1.in', immediateRender: false }, at);
-    const forward = (a, b, at, len) => {   // the next photo is already at 1.12 on top and settles to 1; the previous fades (~15% of the step)
-      tl.fromTo(b, { opacity: 0, scale: 1.12 }, { opacity: 1, duration: len * 0.15, immediateRender: false }, at)
-        .to(b, { scale: 1, duration: len * 0.3, ease: 'power2.out' }, at)
-        .to(a, { opacity: 0, duration: len * 0.15 }, at + len * 0.02)
-        .to(a, { scale: 1.75, duration: len * 0.15 }, at);
-    };
-    const turn = (a, b, at, len, dir) => {   // whip pan: turning left the scene slides right, and vice versa
-      const s = dir === 'left' ? 1 : -1, d = len * 0.25;
-      tl.to(a, { xPercent: 35 * s, rotationY: -3 * s, opacity: 0, duration: d, ease: 'power2.in' }, at)
-        .fromTo(b, { xPercent: -35 * s, rotationY: 3 * s, opacity: 0 }, { xPercent: 0, rotationY: 0, opacity: 1, duration: d, ease: 'power3.out', immediateRender: false }, at);
-    };
-    const go = (i, at, dur) => { if (dot && P[i]) tl.to(dot, { left: P[i][0] + '%', top: P[i][1] + '%', duration: dur, ease: 'power1.inOut' }, at); };
-    // 1 · the street: zoom toward the entrance
-    zoom(ph[0], 0.05, 0.85);
-    go(1, 0.55, 0.45);
-    // 2 · the door closes over the frame, the inside is set behind it, the door swings open on its hinges
-    tl.fromTo(wl, { xPercent: -101 }, { xPercent: 0, duration: 0.28, ease: 'power2.inOut', immediateRender: false }, 0.85)
-      .fromTo(wr, { xPercent: 101 }, { xPercent: 0, duration: 0.28, ease: 'power2.inOut', immediateRender: false }, 0.85)
-      .to(num, { opacity: 1, duration: 0.12 }, 1.02)
-      .set(ph[0], { opacity: 0 }, 1.2).set(ph[1], { opacity: 1, scale: 1.12 }, 1.2)
-      .to(num, { opacity: 0, duration: 0.1 }, 1.3)
-      .to(wl, { rotationY: 100, duration: 0.5, ease: 'power2.in' }, 1.35)
-      .to(wr, { rotationY: -100, duration: 0.5, ease: 'power2.in' }, 1.35)
-      .to([wl, wr], { opacity: 0, duration: 0.12 }, 1.75)
-      .to(ph[1], { scale: 1, duration: 0.6, ease: 'power2.out' }, 1.35);
-    // 3 · turn left into the living room, then walk toward the left glass door
-    turn(ph[1], ph[2], 2.0, 1, ph[2].dataset.dir || 'left');
-    go(2, 1.95, 0.4);
-    zoom(ph[2], 2.3, 0.7);
-    // 4 · out to the garden: forward onto the deck, slow push-in
-    forward(ph[2], ph[3], 3.0, 0.75);
-    go(3, 3.0, 0.35);
-    tl.to(ph[3], { scale: 1.1, duration: 0.5 }, 3.25);
-    // 5 · turn around: the house from the garden, held for the last 20%
-    turn(ph[3], ph[4], 3.75, 1, ph[4].dataset.dir || 'right');
-    go(4, 3.75, 0.25);
-    tl.to({}, { duration: 1 }, 4);
-    const marks = [0, 0.9, 1.95, 2.95, 3.75];
-    let cur = 0;
-    const setStep = i => {
-      if (i === cur) return; cur = i;
-      now.textContent = pad2(i + 1);
-      cap.innerHTML = data.captions[i] || '';
-      gsap.fromTo(cap, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', overwrite: true });
-    };
-    const st = ScrollTrigger.create({
-      trigger: hero, start: 'top top', end: () => '+=' + Math.round(innerHeight * 5), pin: true, scrub: 0.4, anticipatePin: 1, invalidateOnRefresh: true, animation: tl
+    tl.to(fr, { x: dx, y: dy, scale: full, duration: 0.42, ease: 'power2.inOut' }, 0)
+      .to([lines, bar_, shade], { opacity: 0, duration: 0.14 }, 0)
+      .to(head, { opacity: 0, y: -24, duration: 0.22 }, 0)
+      .to(under, { opacity: 0, duration: 0.16 }, 0)
+      .to(fr, { x: 0, scale: 1, duration: 0.42, ease: 'power2.inOut' }, 0.58)
+      .to([lines, bar_, shade], { opacity: 1, duration: 0.16 }, 0.84)
+      .fromTo(under, { y: 0 }, { y: dy, opacity: 1, duration: 0.2, immediateRender: false }, 0.8);
+    ScrollTrigger.create({
+      trigger: hero, start: 'top top', end: () => '+=' + Math.round(innerHeight), pin: true, scrub: 0.5, anticipatePin: 1, invalidateOnRefresh: true, animation: tl,
+      onUpdate: s => { const on = s.progress > 0.01 && s.progress < 0.99; root.classList.toggle('film-open', on); on ? FILM.pause('open') : FILM.resume('open'); }
     });
-    tl.eventCallback('onUpdate', () => { const t = tl.time(); let i = 0; for (let k = 0; k < n; k++) if (t >= marks[k]) i = k; setStep(i); });
-    jumps['#gardens'] = () => st.start + (st.end - st.start) * (3.25 / 5);
   }
 
   /* ---------------- the signature: pinned, the landscape photo pans across, the headline rises ---------------- */
@@ -359,44 +286,6 @@
     jumps['#gardens'] = () => tl.scrollTrigger.start + 2;
   }
 
-  /* ---------------- the story: pinned; the framed photo rises away while the next frame draws ---------------- */
-  const story = $('#story');
-  if (story) {
-    const items = $$('.story-item', story), now = $('.story-now', story), n = items.length;
-    const parts = items.map(it => ({ it, word: $('.story-word', it), fr: $('.frame', it), inner: $('.frame-in', it), img: $('.frame-in img', it), line: $('.story-line', it) }));
-    parts.forEach(p => { hideFrame(p.fr, p.inner); gsap.set([p.word, p.line], { opacity: 0, y: 30 }); });
-    let cur = -1;
-    const setNow = i => { if (i !== cur) { cur = i; now.textContent = pad2(i + 1); } };
-    const HOLD = 0.6, TRANS = 1.3, STEP = TRANS + HOLD;
-    const total = HOLD + (n - 1) * STEP + 0.3;
-    const tl = gsap.timeline({
-      defaults: { ease: 'none' },
-      scrollTrigger: {
-        trigger: story, start: 'top top', end: () => '+=' + Math.round(innerHeight * total * 0.75), pin: true, scrub: 0.6, invalidateOnRefresh: true, anticipatePin: 1,
-        onUpdate: s => { const u = s.progress * total; setNow(Math.min(n - 1, Math.max(0, Math.floor((u - HOLD - TRANS * 0.5) / STEP) + 1))); }
-      }
-    });
-    ScrollTrigger.create({ trigger: story, start: 'top 55%', once: true, onEnter: () => {
-      const p = parts[0], t = gsap.timeline();
-      revealHead($('.sh', story), t, 0);
-      t.to(p.word, { opacity: 1, y: 0, duration: 0.9 }, 0);
-      drawFrame(t, p.fr, 0.15, 0.9, p.fr.offsetWidth, p.fr.offsetHeight);
-      risePhoto(t, p.inner, 1.0, 0.9);
-      t.to(p.line, { opacity: 1, y: 0, duration: 0.7 }, 1.3);
-    } });
-    parts.forEach((p, i) => {
-      const t0 = i === 0 ? 0 : HOLD + (i - 1) * STEP;
-      tl.fromTo(p.img, { scale: 1 }, { scale: 1.05, duration: (i === 0 ? HOLD : STEP) + (i < n - 1 ? TRANS * 0.5 : 0.3) }, t0);
-      if (i === 0) return;
-      tl.to(parts[i - 1].it, { y: -90, opacity: 0, duration: 0.55, ease: 'power1.in' }, t0)
-        .fromTo(p.word, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: 'power2.out' }, t0 + 0.35);
-      drawFrame(tl, p.fr, t0 + 0.25, 0.6, p.fr.offsetWidth || 1, p.fr.offsetHeight || 1);
-      risePhoto(tl, p.inner, t0 + 0.7, 0.55);
-      tl.fromTo(p.line, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }, t0 + 0.95);
-    });
-    tl.to({}, { duration: 0.3 }, total - 0.3);
-  }
-
   /* ---------------- the plan: pinned; scroll steps through the floors, each one draws itself in ---------------- */
   const plan = $('#plan');
   if (plan) {
@@ -438,7 +327,7 @@
   }
 
   /* ---------------- generic reveals (created after the pins so their positions include the pin spacing) ---------------- */
-  $$('.sh').filter(sh => !sh.closest('#hero, #house, #story, #plan, .gd-stage')).forEach(sh => {
+  $$('.sh').filter(sh => !sh.closest('#hero, .sig, #plan, .gd-stage')).forEach(sh => {
     ScrollTrigger.create({ trigger: sh, start: 'top 86%', once: true, onEnter: () => revealHead(sh) });
   });
   const fadeIn = (el, delay = 0) => gsap.fromTo(el, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, delay });
@@ -765,6 +654,86 @@
     panel.addEventListener('pointerup', end); panel.addEventListener('pointercancel', end);
     panel.addEventListener('touchmove', e => { if (drag && drag.dy > 4) e.preventDefault(); }, { passive: false });
     return { close, isOpen: () => open };
+  }
+
+  /* ---- the film: five photos play by themselves (Ken Burns + crossfade). Tap the right half = next, the left half = previous,
+     long-press = pause. Paused off screen, in a hidden tab and during the opening transition. Reduced motion: still photo, tap to advance. ---- */
+  function initFilm() {
+    const el = $('#hero.film'), dataEl = $('#film-data');
+    if (!el || !dataEl) return null;
+    const ph = $$('.film-ph', el), fills = $$('.film-seg b', el), cap = $('.film-cap', el), now = $('.film-now', el), tap = $('.film-tap', el), fr = $('.film-frame', el);
+    const data = JSON.parse(dataEl.textContent), n = ph.length, DUR = data.seconds, FADE = data.fade, LIFE = DUR + FADE;
+    // the photos after the first load right after it (1000px on phones, 2000px only on wide screens via <source media>)
+    const first = $('img', ph[0]);
+    const loadRest = () => setTimeout(() => {
+      $$('source[data-wsrcset]', el).forEach(s => { s.srcset = s.dataset.wsrcset; delete s.dataset.wsrcset; });
+      $$('img[data-wsrc]', el).forEach(im => { im.src = im.dataset.wsrc; delete im.dataset.wsrc; });
+    }, 60);
+    if (!first || first.complete) loadRest(); else { first.addEventListener('load', loadRest, { once: true }); first.addEventListener('error', loadRest, { once: true }); }
+    // Ken Burns: scale 1 → 1.08 and a small pan that grows with it (never shows an edge), a different direction per photo
+    const PAN = [[0.9, 0.35], [-0.9, 0.2], [0.25, -0.9], [-0.6, 0.75], [0.75, 0.6]];
+    const kb = (k, p) => {
+      if (reduce) return 'none';
+      p = clamp01(p);
+      const s = 1 + 0.08 * p, m = (s - 1) / 2 * 100 * 0.9, [dx, dy] = PAN[k % PAN.length];
+      return `translate3d(${(dx * m).toFixed(3)}%, ${(dy * m).toFixed(3)}%, 0) scale(${s.toFixed(4)})`;
+    };
+
+    let idx = 0, t = 0, head = 0, last = 0, raf = 0;   // head: how long the current photo was already on screen when it became current
+    const hold = new Set();
+    const render = () => {
+      const nx = (idx + 1) % n, f = reduce ? 0 : clamp01((t - (DUR - FADE)) / FADE);
+      ph.forEach((p, k) => {
+        let o = 0, z = 0, life = 0;
+        if (k === idx) { o = 1; z = 1; life = (t + head) / LIFE; } else if (k === nx && f > 0) { o = smooth(f); z = 2; life = (t - (DUR - FADE)) / LIFE; }
+        p.style.opacity = o; p.style.zIndex = z;
+        if (o > 0) p.style.transform = kb(k, life);
+      });
+      fills.forEach((b, k) => { b.style.transform = `scaleX(${k < idx ? 1 : k > idx ? 0 : reduce ? 1 : clamp01(t / DUR).toFixed(4)})`; });
+    };
+    const setIdx = i => {
+      idx = i; now.textContent = pad2(i + 1); cap.innerHTML = data.captions[i] || '';
+      if (!reduce && cap.animate) cap.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 500, easing: 'cubic-bezier(.22,.9,.3,1)' });
+    };
+    const tick = ts => {
+      raf = 0;
+      const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0; last = ts;
+      t += dt;
+      if (t >= DUR) { t -= DUR; head = FADE; setIdx((idx + 1) % n); }
+      render();
+      play();
+    };
+    function play() { if (!raf && !reduce && !hold.size) { if (!last) last = 0; raf = requestAnimationFrame(tick); } }
+    const pause = why => { hold.add(why); if (raf) { cancelAnimationFrame(raf); raf = 0; } last = 0; };
+    const resume = why => { hold.delete(why); play(); };
+    const go = i => { t = 0; head = 0; setIdx(((i % n) + n) % n); render(); };
+    // tap · long-press (physical halves: right = next, left = previous)
+    let press = null;
+    tap.addEventListener('pointerdown', e => {
+      if (e.button) return;
+      press = { x: e.clientX, y: e.clientY, long: false };
+      press.timer = setTimeout(() => { if (press) { press.long = true; pause('press'); } }, 380);
+    });
+    tap.addEventListener('pointermove', e => {
+      if (press && !press.long && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { clearTimeout(press.timer); press = null; }
+    });
+    const endPress = e => {
+      if (!press) return;
+      clearTimeout(press.timer);
+      const p = press; press = null;
+      if (p.long) { resume('press'); return; }
+      if (e.type !== 'pointerup') return;
+      const r = tap.getBoundingClientRect();
+      go(e.clientX - r.left > r.width / 2 ? idx + 1 : idx - 1);
+    };
+    tap.addEventListener('pointerup', endPress); tap.addEventListener('pointercancel', endPress);
+    tap.addEventListener('contextmenu', e => e.preventDefault());
+    tap.addEventListener('click', e => { if (e.detail === 0) go(idx + 1); });   // keyboard: Enter / Space = next
+    // off screen · hidden tab
+    if ('IntersectionObserver' in window) new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? resume('offscreen') : pause('offscreen')), { threshold: 0.15 }).observe(fr);
+    document.addEventListener('visibilitychange', () => document.hidden ? pause('hidden') : resume('hidden'));
+    render(); play();
+    return { pause, resume, frame: fr };
   }
 
   /* ---- the visit: pick a time, then who to send it to ---- */

@@ -34,13 +34,12 @@ const use = (n, crop, key = String(n)) => {
 };
 const floors = (d.floors || []);
 const K = {
-  walk: ((d.walk || {}).steps || []).map(s => use(s.photo)),
-  hero: d.walk ? null : use(P.hero), sig: d.walk ? null : use(P.signature), location: use(P.location),
-  story: (d.story || []).map(s => use(s.photo)),
+  film: ((d.film || {}).slides || []).map(s => use(s.photo)),
+  hero: d.film ? null : use(P.hero), sig: d.film ? null : use(P.signature), house: d.house ? use(d.house.photo) : null,
   floors: floors.map(f => use(f.photo)),
   spots: floors.map(f => (f.spots || []).map(p => use(p.photo))),
-  gdFrom: d.gardens && !d.walk ? use(d.gardens.from) : null, gdTo: d.gardens && !d.walk ? use(d.gardens.to) : null,
-  garden: (d.walk ? [] : (d.gardens || {}).photos || []).map(g => use(g.photo)),
+  gdFrom: d.gardens && !d.film ? use(d.gardens.from) : null, gdTo: d.gardens && !d.film ? use(d.gardens.to) : null,
+  garden: (d.film ? [] : (d.gardens || {}).photos || []).map(g => use(g.photo)),
   gallery: (d.gallery || []).map(g => use(g.photo)),
 };
 const fullscreen = new Set((P.fullscreen || [P.hero, P.signature]).map(String));
@@ -311,15 +310,15 @@ function sections() {
   } else S.intro = '';
 
   /* hero */
-  const W = d.walk;
-  if (W && K.walk.length) {
-    // the walk: the hero's head, then one framed viewport scrubbed through the house (zoom forward / whip-pan turns)
-    const gf = floors.findIndex(f => f.id === (W.mapFloor || 'ground')), gp = PLAN[gf];
+  const F = d.film;
+  if (F && K.film.length) {
+    // the film: the hero's head, then a framed viewport that plays the house by itself (Ken Burns + crossfade, story-style segments)
+    const fs_ = F.slides;
     const pic = (k, i) => { const im = IMG[k], a = i > 0 ? 'data-w' : '';
-      return `<picture>${im.src[2000] ? `<source media="(min-width: 901px)" ${a}srcset="${im.src[2000]}">` : ''}<img ${a}src="${im.src[1000]}" width="${im.w}" height="${im.h}" alt="${alt(k)}"${st[i].pos ? ` style="object-position:${esc(st[i].pos)}"` : ''}${i === 0 ? ' fetchpriority="high"' : ''} decoding="async"></picture>`; };
-    const st = W.steps; const path0 = (W.mapPath || [])[0] || [50, 0];
+      return `<picture>${im.src[2000] ? `<source media="(min-width: 901px)" ${a}srcset="${im.src[2000]}">` : ''}<img ${a}src="${im.src[1000]}" width="${im.w}" height="${im.h}" alt="${alt(k)}" style="object-position:${focus(k)}"${i === 0 ? ' fetchpriority="high"' : ''} decoding="async"></picture>`; };
+    const cap = s => `<b class="film-room">${esc(s.room || '')}</b><span class="film-sep" aria-hidden="true"> · </span>${nums(s.caption || '')}`;
     S.hero = `
-<section class="hero walk" id="hero" aria-label="${esc(d.title)}">
+<section class="hero film" id="hero" aria-label="${esc(d.title)}">
   <div class="hero-head">
     <p class="hero-label label-en" lang="en">${esc(d.latinTitle || `${d.type} · ${d.area}`)}</p>
     <h1 class="hero-title">${nums(d.title)}</h1>
@@ -327,17 +326,17 @@ function sections() {
     ${d.price != null ? `<p class="hero-price"><span class="hero-price-num num" dir="ltr">${fmtPrice(d.price)}</span><span class="hero-price-label">${esc(H.priceLabel || 'מחיר מבוקש')}</span></p>` : ''}
     <i class="hero-rule" aria-hidden="true"></i>
   </div>
-  <div class="walk-box">
-    ${frame(`${st.map((s, i) => `<div class="walk-ph" data-i="${i}"${s.origin ? ` data-origin="${esc(s.origin)}"` : ''}${s.dir ? ` data-dir="${esc(s.dir)}"` : ''}>${pic(K.walk[i], i)}</div>`).join('')}
-      <div class="walk-door" aria-hidden="true"><i class="wd wd-l"><b class="wd-handle"></b></i><i class="wd wd-r"></i><p class="wd-num" lang="en">${esc(d.houseNumber || '')}</p></div>
-      ${gp ? `<a class="walk-map" href="#plan" aria-label="לתוכנית הקומה"><span class="walk-map-in" style="--ar:${(gp.w / gp.h).toFixed(4)}"><span class="walk-map-ink" style="-webkit-mask-image:url('${gp.src}');mask-image:url('${gp.src}')"></span><i class="walk-dot" style="left:${path0[0]}%;top:${path0[1]}%"></i></span></a>` : ''}`, { cls: 'hero-frame walk-frame', reveal: false })}
-    <div class="walk-under">
-      <p class="walk-cap" aria-live="polite">${nums(st[0].caption || '')}</p>
-      <p class="walk-count" dir="ltr" aria-hidden="true"><b class="walk-now">01</b><span class="walk-of"> / ${pad2(st.length)}</span></p>
+  <div class="film-box">
+    ${frame(`${fs_.map((s, i) => `<div class="film-ph" data-i="${i}">${pic(K.film[i], i)}</div>`).join('')}
+      <i class="film-shade" aria-hidden="true"></i>
+      <div class="film-bar" aria-hidden="true">${fs_.map(() => '<i class="film-seg"><b></b></i>').join('')}</div>
+      <button class="film-tap" type="button" aria-label="התמונה הבאה (הקשה ארוכה: עצירה)"></button>`, { cls: 'hero-frame film-frame', reveal: false })}
+    <div class="film-under">
+      <p class="film-cap" aria-live="polite">${cap(fs_[0])}</p>
+      <p class="film-count" dir="ltr" aria-hidden="true"><b class="film-now">01</b><span class="film-of"> / ${pad2(fs_.length)}</span></p>
     </div>
   </div>
-  <span class="walk-anchor" id="gardens" aria-hidden="true"></span>
-  <script type="application/json" id="walk-data">${JSON.stringify({ captions: st.map(s => nums(s.caption || '')), path: W.mapPath || [] })}</script>
+  <script type="application/json" id="film-data">${JSON.stringify({ captions: fs_.map(cap), seconds: F.seconds || 4, fade: F.fade || 0.9 })}</script>
 </section>`;
   } else S.hero = `
 <section class="hero" id="hero" aria-label="${esc(d.title)}">
@@ -359,7 +358,7 @@ function sections() {
 </section>`;
 
   /* signature (full-bleed, pinned) */
-  S.sig = K.sig && !W ? `
+  S.sig = K.sig && !F ? `
 <section class="sig" id="house" aria-label="${esc(d.signature || d.title)}">
   <div class="sig-stage">
   <div class="sig-pan">${img(K.sig, { cls: 'sig-img', cover: false, sizes: coverSizes(K.sig) }).replace('<img ', `<img data-pan="${((P.pan || {})[P.signature] || []).join(',')}" `)}</div>
@@ -373,7 +372,7 @@ function sections() {
 
   /* the gardens: the living room continues outside (framed 28 → zoom into the door → 40 full-bleed) */
   const G = d.gardens;
-  S.gardens = G && !W && K.gdFrom && K.gdTo ? `
+  S.gardens = G && !F && K.gdFrom && K.gdTo ? `
 <section class="gardens" id="gardens" aria-label="${esc(G.title)}">
   <div class="gd-stage">
     <div class="gd-head">${head(L.gardens, G.title)}</div>
@@ -384,21 +383,6 @@ function sections() {
     ${G.photos.map((g, i) => `<figure class="sig-fig">${frame(img(K.garden[i], { sizes: '(min-width: 900px) 42vw, calc(100vw - 48px)' }), { cls: 'sig-frame' })}<figcaption class="sig-cap"><span class="label-en" lang="en">${esc(g.latin)}</span> · ${esc(g.he)}</figcaption></figure>`).join('\n    ')}
   </div>` : ''}
   ${G.line ? `<p class="gd-line" data-fade>${nums(G.line)}</p>` : ''}
-</section>` : '';
-
-  /* story */
-  const st = d.story || [];
-  S.story = st.length ? `
-<section class="story" id="story" aria-label="קומת הכניסה">
-  <div class="story-head">${head(L.story, '')}</div>
-  <p class="story-count" aria-hidden="true"><b class="story-now">01</b><span class="story-of"> / ${pad2(st.length)}</span></p>
-  <div class="story-stage">
-  ${st.map((s, i) => `<article class="story-item">
-    <p class="story-word" lang="en" aria-hidden="true"><span class="fit">${esc(s.word)}</span></p>
-    ${frame(img(K.story[i], { defer: true, sizes: '(min-width: 900px) 64vw, calc(100vw - 48px)' }), { cls: 'story-frame', reveal: false })}
-    <p class="story-line">${nums(s.line)}</p>
-  </article>`).join('\n  ')}
-  </div>
 </section>` : '';
 
   /* imagine: before / after */
@@ -435,7 +419,7 @@ function sections() {
   </ol><i class="pl-bar" aria-hidden="true"><b></b></i></nav>
   <div class="pl-stage">
     ${fl.map((f, j) => `<article class="pl-floor${j === 0 ? ' is-on' : ''}" data-f="${j}" aria-label="${esc(f.he)}">
-      <div class="pl-plan"><div class="pl-draw" style="--ar:${(f.plan.w / f.plan.h).toFixed(4)}"><span class="pl-ink" style="-webkit-mask-image:url('${f.plan.src}');mask-image:url('${f.plan.src}')"></span>
+      <div class="pl-plan"><div class="pl-draw" style="--ar:${(f.plan.w / f.plan.h).toFixed(4)}"><span class="pl-ink" data-mask="${f.plan.src}"></span>
         ${(f.spots || []).map((p, k) => { const sk = K.spots[f.i][k], im = IMG[sk]; return `<button class="spot${p.x > 66 ? ' spot-l' : ''}" type="button"${gc('plan-' + (p.id || p.label))} style="left:${p.x}%;top:${p.y}%" data-label="${esc(p.label)}" data-floor="${esc(f.label)}" data-src="${im.src[1000]}" data-srcset="${srcset(im.src)}" data-alt="${alt(sk)}" data-w="${im.w}" data-h="${im.h}" aria-haspopup="dialog" aria-label="לצפייה: ${esc(p.label)}"><i class="spot-dot" aria-hidden="true"></i><span class="spot-label">${esc(p.label)}</span></button>`; }).join('')}
         <button class="pl-zoom" type="button" aria-label="פתיחת התוכנית של ${esc(f.he)} במסך מלא" data-src="${f.plan.src}" data-w="${f.plan.w}" data-h="${f.plan.h}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>${d.planNote ? `<p class="pl-note">${esc(d.planNote)}</p>` : ''}</div>
       <div class="pl-info">
@@ -456,7 +440,8 @@ function sections() {
   </div>
 </div>` : '';
 
-  /* price */
+  /* price + facts: the number, the line, then the house in numbers (one section on the light ground) */
+  const facts = (d.facts || []).filter(f => f.value);
   S.price = d.price != null ? `
 <section class="price" id="price" aria-label="מחיר מבוקש">
   ${THEME === 'light' ? '<div class="price-grid" aria-hidden="true"><i class="pg-h"></i><i class="pg-v"></i></div>' : priceRings()}
@@ -464,20 +449,12 @@ function sections() {
       ? `<span class="pd" data-d="${ch}"><span class="pd-col">${Array.from({ length: 20 }, (_, k) => `<span>${k % 10}</span>`).join('')}</span></span>`
       : `<span class="pc${ch === '₪' ? ' cur' : ''}">${ch}</span>`).join('')}</p>` })}
   ${d.priceSignature ? `<p class="price-sig" data-fade>${nums(d.priceSignature)}</p>` : ''}
-  ${d.priceLine ? `<p class="price-sub" data-fade>${nums(d.priceLine)}</p>` : ''}
-</section>` : '';
-
-  /* facts (the one dark section in the light theme) */
-  const facts = (d.facts || []).filter(f => f.value);
-  S.facts = facts.length ? `
-<section class="facts" id="facts" aria-label="${esc(d.factsTitle || 'במספרים')}">
-  ${head(L.facts, d.factsTitle || 'במספרים.')}
-  <dl class="facts-grid">
+  ${facts.length ? `<dl class="facts-grid">
     ${facts.map(f => `<div class="fact" data-fade>
       <dt class="fact-label">${nums(f.label)}</dt>
       <dd class="fact-val"><span class="fact-num num" data-count="${esc(f.value)}" dir="ltr">${esc(f.value)}</span>${f.unit ? `<span class="fact-unit">${esc(f.unit)}</span>` : ''}</dd>
     </div>`).join('\n    ')}
-  </dl>
+  </dl>` : ''}
   ${has(d.extras) ? `<p class="extras" data-fade>${d.extras.map(e => `<span class="nw">${nums(e)}</span>`).join('<i class="dot" aria-hidden="true"></i>')}</p>` : ''}
 </section>` : '';
 
@@ -511,15 +488,15 @@ function sections() {
   <button class="lb-arrow lb-next" type="button" aria-label="הבא">${R_ARR}</button>
 </div>`;
 
-  /* location */
-  const loc = d.location;
-  S.location = loc ? `
-<section class="location" id="location" aria-label="מיקום">
-  ${head(L.location, loc.title || d.title)}
-  ${K.location ? frame(img(K.location, { sizes: '(min-width: 900px) 88vw, calc(100vw - 48px)' }), { cls: 'loc-frame' }) : ''}
-  <div class="loc-text">
-    ${loc.line ? `<p class="loc-line" data-fade>${nums(loc.line)}</p>` : ''}
-    ${loc.mapsQuery ? `<a class="text-link" data-fade href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(loc.mapsQuery)}" target="_blank" rel="noopener">פתיחה במפה <span aria-hidden="true">↗</span></a>` : ''}
+  /* the house: the closing photo, large and framed, with the location */
+  const hs = d.house;
+  S.house = hs && K.house ? `
+<section class="house" id="house" aria-label="${esc(hs.title || d.title)}">
+  ${head(L.house, hs.title || d.title)}
+  ${frame(img(K.house, { sizes: '(min-width: 900px) min(1100px, 88vw), calc(100vw - 32px)' }), { cls: 'house-frame' })}
+  <div class="house-text">
+    ${hs.line ? `<p class="house-line" data-fade>${nums(hs.line)}</p>` : ''}
+    ${hs.mapsQuery ? `<a class="text-link" data-fade href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(hs.mapsQuery)}" target="_blank" rel="noopener">פתיחה במפה <span aria-hidden="true">↗</span></a>` : ''}
   </div>
 </section>` : '';
 
@@ -557,8 +534,8 @@ function sections() {
 </footer>`;
 
   /* menu: one link per section that exists */
-  const target = { house: ['#house', S.sig], gardens: ['#gardens', W ? S.hero : S.gardens], story: ['#story', S.story], plan: ['#plan', S.plan], imagine: ['#imagine', S.imagine], price: ['#price', S.price],
-    gallery: ['#gallery', S.gallery], location: ['#location', S.location], visit: ['#visit', S.visit] };
+  const target = { house: ['#house', S.house || S.sig], gardens: ['#gardens', S.gardens], plan: ['#plan', S.plan], imagine: ['#imagine', S.imagine], price: ['#price', S.price],
+    gallery: ['#gallery', S.gallery], visit: ['#visit', S.visit] };
   const order = d.menuOrder || Object.keys(target);
   const items = order.filter(k => target[k] && target[k][1] && L[k] && M[k]);
   S.menu = `<div class="menu" id="menu" role="dialog" aria-modal="true" aria-label="תפריט" hidden>
@@ -646,7 +623,7 @@ const vars = {
   url: esc(d.url || ''), og: esc((d.url || '') + 'og.jpg?v=' + ver),
   theme: THEME, themeColor: THEME === 'light' ? '#F2EDE6' : '#1E1915', intro: INTRO,
   robots: d.indexable ? '' : '<meta name="robots" content="noindex, nofollow">',
-  preload: K.walk.length ? (w0 => `<link rel="preload" as="image" href="${w0.src[1000]}"${w0.src[2000] ? ' media="(max-width: 900px)"' : ''} fetchpriority="high">` + (w0.src[2000] ? `\n<link rel="preload" as="image" href="${w0.src[2000]}" media="(min-width: 901px)" fetchpriority="high">` : ''))(IMG[K.walk[0]])
+  preload: K.film.length ? (w0 => `<link rel="preload" as="image" href="${w0.src[1000]}"${w0.src[2000] ? ' media="(max-width: 900px)"' : ''} fetchpriority="high">` + (w0.src[2000] ? `\n<link rel="preload" as="image" href="${w0.src[2000]}" media="(min-width: 901px)" fetchpriority="high">` : ''))(IMG[K.film[0]])
     : `<link rel="preload" as="image" imagesrcset="${srcset(IMG[K.hero].src)}" imagesizes="(min-width: 900px) 60vw, calc(100vw - 48px)" fetchpriority="high">`,
   brand: esc(d.title),
   cta: waAgent ? `<a class="pill is-hidden"${gc('wa-' + agentSlug(waAgent))} href="${esc(waLink(baseMsg()))}" target="_blank" rel="noopener">${WA_ICON}<span>לתיאום ביקור</span></a>` : '',
