@@ -89,7 +89,16 @@ async function grade(file) {
   return { buf: out, width: info.width, height: info.height, gain };
 }
 
-const IMG = {};   // key -> { n, w, h, src: {1000: url, 2000?: url} }
+// The frame shows this until the photo has decoded: a 20px-wide blurred preview (inline base64) over the dominant colour.
+async function placeholder(raw, w, h, channels = 3) {
+  const s = () => sharp(raw, { raw: { width: w, height: h, channels } });
+  const { dominant: c } = await s().stats();
+  const tiny = await s().resize(20, Math.max(1, Math.round(20 * h / w)), { kernel: 'lanczos3' }).blur(0.6).webp({ quality: 50 }).toBuffer();
+  return { ph: `data:image/webp;base64,${tiny.toString('base64')}`, phc: '#' + [c.r, c.g, c.b].map(v => v.toString(16).padStart(2, '0')).join('') };
+}
+const phAttrs = i => i && i.ph ? ` data-ph="${i.ph}" data-phc="${i.phc}"` : '';
+
+const IMG = {};   // key -> { n, w, h, src: {1000: url, 2000?: url}, ph, phc }
 const hash = crypto.createHash('sha1');
 async function processPhotos() {
   fs.rmSync(OUT_IMG, { recursive: true, force: true });
@@ -108,7 +117,7 @@ async function processPhotos() {
       base = sharp(raw, { raw: { width: w, height: h, channels: 3 } });
     }
     const buf0 = await base.raw().toBuffer();
-    IMG[key] = { n, w, h, src: {} };
+    IMG[key] = { n, w, h, src: {}, ...await placeholder(buf0, w, h) };
     for (const W of WIDTHS.filter(W => W === WIDTHS[0] || W <= w * 2)) {
       const H = Math.round(W * h / w);
       let s = sharp(buf0, { raw: { width: w, height: h, channels: 3 } }).resize(W, H, { kernel: 'lanczos3' });
@@ -197,6 +206,8 @@ async function processStaging() {
   if (missing.length) { console.warn(`staging: missing ${missing.join(', ')}, section skipped`); return; }
   const m = await sharp(abs(s.empty)).rotate().metadata();
   const w = m.width, h = m.height, out = [];
+  const er = await sharp(abs(s.empty)).rotate().removeAlpha().toColourspace('srgb').raw().toBuffer({ resolveWithObject: true });
+  const ph = await placeholder(er.data, er.info.width, er.info.height);
   for (const [k, f] of files.entries()) {
     const src = {};
     for (const W of [1000, Math.min(1600, w)]) {
@@ -207,7 +218,7 @@ async function processStaging() {
     }
     out.push(src);
   }
-  STAGE = { w, h, empty: out[0], styles: out.slice(1) };
+  STAGE = { w, h, empty: out[0], styles: out.slice(1), ph };
   console.log(`staging ${w}×${h}, ${s.styles.length} styles`);
 }
 
@@ -254,10 +265,13 @@ const alt = k => esc(altOf(k));
 const focus = k => ((P.focus || {})[k]) || '50% 50%';
 const srcset = src => Object.entries(src).map(([W, u]) => `${u} ${W}w`).join(', ');
 const coverSizes = k => `max(100vw, ${Math.ceil(100 * IMG[k].w / IMG[k].h)}svh)`;
-// defer: photos inside pinned, stacked sections; main.js swaps data-src in when the section is about a screen away.
-function img(k, { cls = '', sizes, eager = false, cover = true, defer = false } = {}) {
-  const i = IMG[k], a = defer ? 'data-' : '';
-  return `<img${cls ? ` class="${cls}"` : ''} ${a}src="${i.src[1000]}" ${a}srcset="${srcset(i.src)}" sizes="${sizes || (cover ? coverSizes(k) : '100vw')}" width="${i.w}" height="${i.h}" alt="${alt(k)}"${cover ? ` style="object-position:${focus(k)}"` : ''}${eager ? ' fetchpriority="high" decoding="async"' : ' loading="lazy" decoding="async"'}>`;
+// phones (up to 768px) always take the 1000w file, whatever the pixel ratio: the slot is declared at 280px for selection only
+// (the layout comes from CSS), so 280 × DPR ≤ 1000 up to DPR 3.5
+const MOB = '(max-width: 768px) 280px, ';
+// every photo that isn't eager is deferred: main.js swaps data-src in when its section is ~1.5 screens away
+function img(k, { cls = '', sizes, eager = false, cover = true } = {}) {
+  const i = IMG[k], a = eager ? '' : 'data-';
+  return `<img${cls ? ` class="${cls}"` : ''} ${a}src="${i.src[1000]}" ${a}srcset="${srcset(i.src)}" sizes="${sizes ? (/^max\(|200vw/.test(sizes) ? '' : MOB) + sizes : cover ? coverSizes(k) : '100vw'}" width="${i.w}" height="${i.h}" alt="${alt(k)}"${cover ? ` style="object-position:${focus(k)}"` : ''}${phAttrs(i)}${eager ? ' fetchpriority="high"' : ''} decoding="async">`;
 }
 const agents = (d.agents || (d.agent ? [d.agent] : [])).filter(a => a && a.name);
 const visit = d.visit || null;
@@ -280,8 +294,8 @@ function head(label, title, { tag = 'h2', cls = '', titleHtml } = {}) {
   </header>`;
 }
 const LINES = '<span class="fr fr-t"></span><span class="fr fr-l"></span><span class="fr fr-b"></span><span class="fr fr-r"></span>';
-const frame = (inner, { cls = '', reveal = true } = {}) =>
-  `<div class="frame${cls ? ' ' + cls : ''}"${reveal ? ' data-reveal' : ''}><span class="fr-lines" aria-hidden="true">${LINES}</span><div class="frame-in">${inner}</div></div>`;
+const frame = (inner, { cls = '', reveal = true, style = '' } = {}) =>
+  `<div class="frame${cls ? ' ' + cls : ''}"${style ? ` style="${style}"` : ''}${reveal ? ' data-reveal' : ''}><span class="fr-lines" aria-hidden="true">${LINES}</span><div class="frame-in">${inner}</div></div>`;
 const pad2 = n => String(n).padStart(2, '0');
 const L_ARR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>', R_ARR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const WA_ICON = '<svg class="wa" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.2a9.8 9.8 0 0 0-8.4 14.8L2.2 21.8l4.9-1.3A9.8 9.8 0 1 0 12 2.2zm0 17.9a8.1 8.1 0 0 1-4.1-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8.1 8.1 0 1 1 12 20.1zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.6 6.6 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3z"/></svg>';
@@ -315,7 +329,7 @@ function sections() {
     // the film: the hero's head, then a framed viewport that plays the house by itself (Ken Burns + crossfade, story-style segments)
     const fs_ = F.slides;
     const pic = (k, i) => { const im = IMG[k], a = i > 0 ? 'data-w' : '';
-      return `<picture>${im.src[2000] ? `<source media="(min-width: 901px)" ${a}srcset="${im.src[2000]}">` : ''}<img ${a}src="${im.src[1000]}" width="${im.w}" height="${im.h}" alt="${alt(k)}" style="object-position:${focus(k)}"${i === 0 ? ' fetchpriority="high"' : ''} decoding="async"></picture>`; };
+      return `<picture>${im.src[2000] ? `<source media="(min-width: 901px)" ${a}srcset="${im.src[2000]}">` : ''}<img ${a}src="${im.src[1000]}" width="${im.w}" height="${im.h}" alt="${alt(k)}" style="object-position:${focus(k)}"${phAttrs(im)}${i === 0 ? ' fetchpriority="high"' : ''} decoding="async"></picture>`; };
     const cap = s => `<b class="film-room">${esc(s.room || '')}</b><span class="film-sep" aria-hidden="true"> · </span>${nums(s.caption || '')}`;
     S.hero = `
 <section class="hero film" id="hero" aria-label="${esc(d.title)}">
@@ -391,9 +405,9 @@ function sections() {
 <section class="imagine" id="imagine" aria-label="${esc(sg.title || 'הדמיית ריהוט')}">
   ${head(L.imagine, sg.title)}
   ${frame(`<div class="ba" style="--pos:50">
-      <img class="ba-real" src="${STAGE.empty[1000]}" srcset="${srcset(STAGE.empty)}" sizes="(min-width: 900px) 70vw, calc(100vw - 48px)" width="${STAGE.w}" height="${STAGE.h}" alt="${esc(sg.room || '')} כפי שהוא היום, ריק (צילום אמיתי)" loading="lazy" decoding="async">
+      <img class="ba-real" data-src="${STAGE.empty[1000]}" data-srcset="${srcset(STAGE.empty)}" sizes="${MOB}(min-width: 900px) 70vw, calc(100vw - 48px)" width="${STAGE.w}" height="${STAGE.h}" alt="${esc(sg.room || '')} כפי שהוא היום, ריק (צילום אמיתי)"${phAttrs(STAGE.ph)} decoding="async">
       <div class="ba-viz">
-        ${sg.styles.map((x, i) => `<img class="ba-style${i === 0 ? ' is-on' : ''}" data-style="${i}" src="${STAGE.styles[i][1000]}" srcset="${srcset(STAGE.styles[i])}" sizes="(min-width: 900px) 70vw, calc(100vw - 48px)" width="${STAGE.w}" height="${STAGE.h}" alt="הדמיה: ${esc(sg.room || '')} מרוהט בסגנון ${esc(x.name)}" loading="lazy" decoding="async">`).join('\n        ')}
+        ${sg.styles.map((x, i) => `<img class="ba-style${i === 0 ? ' is-on' : ''}" data-style="${i}" data-src="${STAGE.styles[i][1000]}" data-srcset="${srcset(STAGE.styles[i])}" sizes="${MOB}(min-width: 900px) 70vw, calc(100vw - 48px)" width="${STAGE.w}" height="${STAGE.h}" alt="הדמיה: ${esc(sg.room || '')} מרוהט בסגנון ${esc(x.name)}" decoding="async">`).join('\n        ')}
       </div>
       <p class="chip ba-chip-viz">הדמיה · הריהוט אינו כלול</p>
       <p class="chip ba-chip-real">צילום · היום</p>
@@ -422,7 +436,7 @@ function sections() {
       <div class="fl-btns" role="group" aria-label="בחירת קומה">
         ${fl.map((f, j) => `<button class="fl-btn${j === f0 ? ' is-on' : ''}" type="button" data-f="${j}" data-el="${esc(f.elevation || '')}"${j === f0 ? ' aria-current="true"' : ''}${gc('floor-' + f.id)}><span class="num" dir="ltr">${flNum(f)}</span><span>${esc(f.he)}</span></button>`).join('')}
       </div>
-      ${frame(`<div class="fl-layer fl-photos">${fl.map((f, j) => `<div class="fl-item fl-ph${j === f0 ? ' is-on' : ''}" data-f="${j}">${(s => f.focus ? s.replace(/object-position:[^"]*/, 'object-position:' + f.focus) : s)(img(f.k, { defer: true, sizes: '(min-width: 900px) 880px, calc(100vw - 68px)' }))}</div>`).join('')}</div>
+      ${frame(`<div class="fl-layer fl-photos">${fl.map((f, j) => `<div class="fl-item fl-ph${j === f0 ? ' is-on' : ''}" data-f="${j}">${(s => f.focus ? s.replace(/object-position:[^"]*/, 'object-position:' + f.focus) : s)(img(f.k, { eager: j === f0, sizes: '(min-width: 900px) 880px, calc(100vw - 68px)' }))}</div>`).join('')}</div>
         <div class="fl-layer fl-plans" aria-hidden="true">${fl.map((f, j) => `<div class="fl-item fl-pl${j === f0 ? ' is-on' : ''}" data-f="${j}" data-src="${f.plan.src}" data-w="${f.plan.w}" data-h="${f.plan.h}" data-name="${esc(f.he)}">
           <div class="pl-draw" style="--ar:${(f.plan.w / f.plan.h).toFixed(4)}"><span class="pl-ink" data-mask="${f.plan.src}"></span>
           ${(f.spots || []).map((p, k) => { const sk = K.spots[f.i][k], im = IMG[sk]; return `<button class="spot${p.x > 66 ? ' spot-l' : ''}" type="button"${gc('plan-' + (p.id || p.label))} style="left:${p.x}%;top:${p.y}%" data-label="${esc(p.label)}" data-floor="${esc(f.label)}" data-src="${im.src[1000]}" data-srcset="${srcset(im.src)}" data-alt="${alt(sk)}" data-w="${im.w}" data-h="${im.h}" aria-haspopup="dialog" aria-label="לצפייה: ${esc(p.label)}" tabindex="-1"><i class="spot-dot" aria-hidden="true"></i><span class="spot-label">${esc(p.label)}</span></button>`; }).join('')}
@@ -506,7 +520,7 @@ function sections() {
   S.house = hs && K.house ? `
 <section class="house" id="house" aria-label="${esc(hs.title || d.title)}">
   ${head(L.house, hs.title || d.title)}
-  ${frame(img(K.house, { sizes: '(min-width: 900px) min(1100px, 88vw), calc(100vw - 32px)' }), { cls: 'house-frame' })}
+  ${frame(img(K.house, { sizes: '(min-width: 900px) min(1100px, 88vw), calc(100vw - 32px)' }), { cls: 'house-frame', style: `--ar:${IMG[K.house].w} / ${IMG[K.house].h}` })}
   <div class="house-text">
     ${hs.line ? `<p class="house-line" data-fade>${nums(hs.line)}</p>` : ''}
     ${hs.mapsQuery ? `<a class="text-link" data-fade href="https://www.google.com/maps/search/?api=1&amp;query=${encodeURIComponent(hs.mapsQuery)}" target="_blank" rel="noopener">פתיחה במפה <span aria-hidden="true">↗</span></a>` : ''}

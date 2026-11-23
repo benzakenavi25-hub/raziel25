@@ -111,6 +111,11 @@ html.js:not(.rm) .frame[data-reveal] .fr-t, html.js:not(.rm) .frame[data-reveal]
 html.js:not(.rm) .frame[data-reveal] .fr-l, html.js:not(.rm) .frame[data-reveal] .fr-r { transform: scaleY(0); }
 html.js:not(.rm) .frame[data-reveal] .frame-in { clip-path: inset(100% 0 0 0); }
 
+/* placeholders: main.js paints the preview on the photo's holder; the photo fades in over it once decoded (eager ones never hide) */
+html.js img[data-ph]:not([fetchpriority]) { opacity: 0; transition: opacity .5s ease; }
+html.js img[data-ph].is-in { opacity: 1; }
+html.rm img[data-ph] { transition: none; }
+
 .chip { position: absolute; z-index: 2; padding: 6px 10px; font: 400 12px/1.2 var(--he); background: rgba(242, 237, 230, .9); color: #1E1B18; pointer-events: none; white-space: nowrap; }
 .chip[lang="en"] { font: 400 11px/1.2 var(--latin); letter-spacing: .28em; }
 .chip [lang="he"] { font: 400 12px/1.2 var(--he); letter-spacing: 0; }
@@ -560,5 +565,7 @@ html.js:not(.rm) .pc { opacity: 0; }
 .house { padding: 6vh var(--gut) 6vh; }
 .house-frame { width: min(calc(100vw - 32px), 1100px); margin: 30px calc((100% - min(100vw - 32px, 1100px)) / 2) 0; aspect-ratio: 4 / 5; }
 @media (min-width: 900px) { .house-frame { aspect-ratio: 16 / 9; } }
+/* phones: the frame takes the photo's own proportions, so the whole house shows uncropped */
+@media (max-width: 768px) { .house-frame { aspect-ratio: var(--ar, 4 / 5); } }
 .house-text { padding-top: 26px; max-width: 820px; }
 .house-line { color: var(--fg2); max-width: 30em; }

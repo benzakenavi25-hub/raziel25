@@ -14,7 +14,20 @@
   const pad2 = n => String(n).padStart(2, '0');
   const boxOf = el => el.parentElement && el.parentElement.classList.contains('pin-spacer') ? el.parentElement : el;
 
-  /* ---------------- deferred photos: load a section's photos when it is ~1.5 screens away ---------------- */
+  /* ---------------- placeholders: each photo's holder shows a blurred preview over the dominant colour; the photo fades in
+     over it once decoded (eager photos are never hidden) ---------------- */
+  $$('img[data-ph]').forEach(im => {
+    const h = im.parentElement, s = h.style;
+    s.backgroundColor = im.dataset.phc; s.backgroundImage = `url("${im.dataset.ph}")`;
+    s.backgroundSize = 'cover'; s.backgroundRepeat = 'no-repeat'; s.backgroundPosition = im.style.objectPosition || '50% 50%';
+    const show = () => im.classList.add('is-in');
+    if (im.complete && im.naturalWidth) { show(); return; }
+    const ready = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(show);
+    im.addEventListener('load', ready, { once: true });
+    im.addEventListener('error', show, { once: true });
+  });
+
+  /* ---------------- deferred photos: load a section's photos when it is ~1.5 screens away (either direction) ---------------- */
   const loadImg = im => { if (!im.dataset.src) return; if (im.dataset.srcset) im.srcset = im.dataset.srcset; im.src = im.dataset.src; im.removeAttribute('data-src'); im.removeAttribute('data-srcset'); };
   // the plan drawings are CSS masks: set them only when their section comes near, like the photos
   const loadMask = el => { const u = `url("${el.dataset.mask}")`; el.style.webkitMaskImage = u; el.style.maskImage = u; el.removeAttribute('data-mask'); };
@@ -23,7 +36,7 @@
     const io = new IntersectionObserver(es => es.forEach(e => {
       if (!e.isIntersecting) return;
       $$('img[data-src]', e.target).forEach(loadImg); $$('[data-mask]', e.target).forEach(loadMask); io.unobserve(e.target);
-    }), { rootMargin: '0px 0px 150% 0px' });
+    }), { rootMargin: '150% 0px' });
     new Set(deferred.map(im => im.closest('section') || im.parentElement)).forEach(s => io.observe(s));
   } else { deferred.forEach(el => (el.dataset.mask ? loadMask(el) : loadImg(el))); }
 
@@ -278,11 +291,12 @@
   });
   $$('.frame[data-reveal]').forEach(fr => {
     const inner = $('.frame-in', fr), im = $('img', fr), isBA = fr.classList.contains('ba-frame');
-    ScrollTrigger.create({ trigger: fr, start: 'top 80%', once: true, onEnter: () => {
+    // starts early and is done within 0.8s; never waits for the photo (the placeholder is what rises if it isn't decoded yet)
+    ScrollTrigger.create({ trigger: fr, start: 'top 90%', once: true, onEnter: () => {
       const tl = gsap.timeline();
-      drawFrame(tl, fr, 0, 0.9, fr.offsetWidth, fr.offsetHeight);
-      risePhoto(tl, inner, 0.9, 0.9);
-      if (isBA && BA) tl.add(() => BA.hint(), 1.6);
+      drawFrame(tl, fr, 0, 0.8, fr.offsetWidth, fr.offsetHeight);
+      risePhoto(tl, inner, 0.1, 0.7);
+      if (isBA && BA) tl.add(() => BA.hint(), 0.8);
     } });
     if (!isBA) gsap.fromTo(im, { scale: 1 }, { scale: 1.05, ease: 'none', scrollTrigger: { trigger: fr, start: 'top 80%', end: 'bottom top', scrub: true } });
   });
@@ -630,7 +644,7 @@
     const show = btn => {
       opener = btn;
       im.removeAttribute('src');
-      im.srcset = btn.dataset.srcset; im.sizes = '(min-width: 900px) 700px, calc(100vw - 68px)'; im.src = btn.dataset.src; im.alt = btn.dataset.alt;
+      im.srcset = btn.dataset.srcset; im.sizes = '(max-width: 768px) 280px, (min-width: 900px) 700px, calc(100vw - 68px)'; im.src = btn.dataset.src; im.alt = btn.dataset.alt;
       im.width = +btn.dataset.w; im.height = +btn.dataset.h;
       title.textContent = btn.dataset.label; en.textContent = btn.dataset.floor || '';
       if (!open) {
